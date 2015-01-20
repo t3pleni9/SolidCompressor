@@ -21,10 +21,14 @@
  * 
  */
 
+#include <string>
+#ifdef  _GLIBCXX_STRING
+#define DIM 7000
+#endif
 
 #ifndef DEDUP_H
 #define DEDUP_H
-
+using namespace::std;
 class deDup
 {
     public:
@@ -32,6 +36,8 @@ class deDup
         virtual ~deDup();
     
     private:
+        static string getHash(string);
+        static string readBlock(fstream);
         /* add your private declarations */
 };
 
