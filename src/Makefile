@@ -1,14 +1,14 @@
-IDIR = ./include
+IDIR = ../include
 CC = gcc
 CXX = g++
 CFLAGS = -Wall -I$(IDIR)
 
-ODIR = ./obj
+ODIR = ../obj
 MKODIR = mkdir -p $(ODIR)
-LDIR = ./lib
+LDIR = ../lib
 MKLDIR = mkdir -p $(LDIR)
-SDIR = ./src
-BINDIR = ./bin/
+SDIR = .
+BINDIR = ../bin/
 MKBDIR = mkdir -p $(BINDIR) 
 
 
@@ -32,13 +32,10 @@ $(ODIR)/%.o: $(SDIR)/%.cpp $(DEPS)
 	$(MKODIR)
 	$(CXX) -c -o $@ $< $(CFLAGS)
 
+$(_OBJ): $(OBJ)
+	
 
 
-test: $(OBJ)
-	$(MKBDIR)
-	$(CXX) main.cpp -o $(BINDIR)main $^ $(CFLAGS) $(LIBS)
-
-$(_OBJ): $(OBJ)	
 
 .PHONY: clean
 
