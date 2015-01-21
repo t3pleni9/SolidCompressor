@@ -18,13 +18,13 @@ MKBDIR = mkdir -p $(BINDIR)
 
 LIBS = -lm -lcrypto
 
-_DEPS = dedup.h
+_DEPS = hash.h index.h dedup.h 
 DEPS = $(patsubst %,$(IDIR)/%,$(_DEPS))
 
-_OBJ = dedup.o 
+_OBJ = hash.o index.o dedup.o 
 OBJ = $(patsubst %,$(ODIR)/%,$(_OBJ))
 
-_SRCXX = dedup.cpp 
+_SRCXX = hash.cpp index.cpp dedup.cpp 
 SRCXX = $(patsubst %,$(SDIR)/%,$(_SRCXX))
 
 $(ODIR)/%.o: $(SDIR)/%.c $(DEPS)
