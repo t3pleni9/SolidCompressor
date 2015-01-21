@@ -1,5 +1,5 @@
 /*
- * dedup.cpp
+ * hash.h
  * 
  * Copyright 2015 Justin Jose <justinjose999@gmail.com>
  * 
@@ -20,23 +20,23 @@
  * 
  * 
  */
+ 
+#include <openssl/sha.h>
+#include <cstring>
 
+#ifndef HASH_H
+#define HASH_H
 
-
-#include "dedup.h"
-
-
-
-DeDup::DeDup()
+class Hash
 {
-	
-}
+    public:
+        Hash();
+        static SHA_CTX getHash(char*, unsigned char*);
+        static SHA_CTX getNextHash(char*, unsigned char*, SHA_CTX);
+            
+    private:
+        static SHA_CTX getHash(char*, unsigned char*, SHA_CTX);   
 
+};
 
-DeDup::~DeDup()
-{
-    
-}
-
-
-
+#endif /* HASH_H */ 

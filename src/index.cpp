@@ -1,5 +1,5 @@
 /*
- * dedup.cpp
+ * index.cpp
  * 
  * Copyright 2015 Justin Jose <justinjose999@gmail.com>
  * 
@@ -22,21 +22,39 @@
  */
 
 
-
-#include "dedup.h"
-
-
-
-DeDup::DeDup()
-{
-	
-}
+#include "index.h"
+#include "hash.h"
 
 
-DeDup::~DeDup()
+Index::Index()
 {
     
 }
 
+Index::~Index() { }
 
+int Index::buildNode(int _l_index, char* block) {
+    index.offsetPointer = _l_index;
+    index.size = 0;
+    indexContext = Hash::getHash(block, (unsigned char*)hashValue);
+       
+    return 1;
+}
+
+int Index::rebuildNode(char* block) {
+    index.size++;
+    indexContext = Hash::getNextHash(block, (unsigned char*)hashValue, indexContext);
+    
+    return 1;
+}
+
+std::pair<std::string, IndexNode> Index::getNode() {
+    char mdString[SHA_DIGEST_LENGTH*2+1];
+    
+    for(int i = 0; i < SHA_DIGEST_LENGTH; i++)
+         sprintf(&mdString[i*2], "%02x", (unsigned int)hashValue[i]);
+    std::string digest(mdString);
+    
+    return (std::pair<std::string, IndexNode>(digest, index));
+}
 

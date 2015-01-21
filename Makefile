@@ -1,8 +1,9 @@
 IDIR = ./include
 CC = gcc
 CXX = g++
+DBGFLAGS = -g
 CFLAGS = -Wall -I$(IDIR)
-CXXFLAGS = $(CFLAGS) -std=c++11
+CXXFLAGS = $(DBGFLAGS) $(CFLAGS) -std=c++11 
 
 ODIR = ./obj
 MKODIR = mkdir -p $(ODIR)
@@ -16,13 +17,13 @@ MKBDIR = mkdir -p $(BINDIR)
 
 LIBS = -lm -lcrypto
 
-_DEPS = dedup.h
+_DEPS = hash.h index.h dedup.h 
 DEPS = $(patsubst %,$(IDIR)/%,$(_DEPS))
 
-_OBJ = dedup.o 
+_OBJ = hash.o index.o dedup.o 
 OBJ = $(patsubst %,$(ODIR)/%,$(_OBJ))
 
-_SRCXX = dedup.cpp 
+_SRCXX = hash.cpp index.cpp dedup.cpp 
 SRCXX = $(patsubst %,$(SDIR)/%,$(_SRCXX))
 
 $(ODIR)/%.o: $(SDIR)/%.c $(DEPS)

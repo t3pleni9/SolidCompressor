@@ -28,32 +28,34 @@
 #include <openssl/sha.h>
 #include <unordered_map>
 
+#include "index.h"
+
 #ifndef DEDUP_H
+/**
+ * @brief 
+ * Header Definition 
+ */
 #define DEDUP_H
 
-using namespace::std;
 
-struct IndexNode {
-    int offsetPointer;
-    int size;
-};
+/**
+ * @brief 
+ * Block hash with the index header. 
+ */
+
 
 class DeDup
 {
     public:
         DeDup();
         virtual ~DeDup();
-        SHA_CTX getHash(string, unsigned char*);
-        SHA_CTX getNextHash(string, unsigned char*, SHA_CTX);
-    
-    private:
-				
-        typedef unordered_map<unsigned char*, IndexNode> t_index;
-        static t_index index;
-        SHA_CTX getHash(string, unsigned char*, SHA_CTX);    
-        string readBlock(fstream);
-        int buildNode(int /*index*/);
         
+    
+    private:				
+        typedef std::unordered_map<std::string, IndexNode> t_index;
+        static t_index storIndex;
+        static IndexNode node;         
+        std::string readBlock(std::fstream);
         
 };
 

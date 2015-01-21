@@ -1,8 +1,10 @@
 IDIR = ../include
 CC = gcc
 CXX = g++
+DBGFLAGS = -g
 CFLAGS = -Wall -I$(IDIR)
-CXXFLAGS = $(CFLAGS) -std=c++11
+CXXFLAGS = $(DBGFLAGS) $(CFLAGS) -std=c++11 
+
 
 ODIR = ../obj
 MKODIR = mkdir -p $(ODIR)

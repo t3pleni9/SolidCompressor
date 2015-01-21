@@ -1,5 +1,5 @@
 /*
- * dedup.cpp
+ * index.h
  * 
  * Copyright 2015 Justin Jose <justinjose999@gmail.com>
  * 
@@ -21,22 +21,41 @@
  * 
  */
 
+#include <string>
+#include <cstring>
+#include <stdio.h>
+#include <openssl/sha.h>
+#include <unordered_map>
+
+#ifndef INDEX_H
+#define INDEX_H
+
+/**
+ * @brief
+ * Stores the index of block(s) on the file.
+ */
+struct IndexNode {
+    int offsetPointer; /**< offset index */
+    int size; /**<  number of blocks*/
+};
 
 
-#include "dedup.h"
-
-
-
-DeDup::DeDup()
-{
-	
-}
-
-
-DeDup::~DeDup()
-{
+class Index{
     
-}
+    private:
+        unsigned char hashValue[SHA_DIGEST_LENGTH]; /**< Hash value of block(s)  */
+        SHA_CTX indexContext;
+        IndexNode index; /**<  On disk index of block(s)*/ 
+        
+    public:
+        Index();
+        //Index(int, char*);
+        
+        virtual ~Index();
+        
+        int buildNode(int, char*);  
+        int rebuildNode(char*); 
+        std::pair<std::string, IndexNode> getNode();   
+};
 
-
-
+#endif /* INDEX_H */ 
