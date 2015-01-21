@@ -43,13 +43,14 @@ class DeDup
     public:
         DeDup();
         virtual ~DeDup();
-        int getHash(string, unsigned char*);
+        SHA_CTX getHash(string, unsigned char*);
+        SHA_CTX getNextHash(string, unsigned char*, SHA_CTX);
     
     private:
 				
         typedef unordered_map<unsigned char*, IndexNode> t_index;
         static t_index index;
-        int getHash(string, unsigned char*, SHA_CTX);    
+        SHA_CTX getHash(string, unsigned char*, SHA_CTX);    
         string readBlock(fstream);
         int buildNode(int /*index*/);
         

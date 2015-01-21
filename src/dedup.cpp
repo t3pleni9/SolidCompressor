@@ -38,7 +38,8 @@ DeDup::~DeDup()
     
 }
 
-int DeDup::getHash(string block, unsigned char* digest, SHA_CTX context) {
+
+SHA_CTX DeDup::getHash(string block, unsigned char* digest, SHA_CTX context) {
     
     /**
      * 
@@ -49,20 +50,27 @@ int DeDup::getHash(string block, unsigned char* digest, SHA_CTX context) {
      **/
     
     char *block_char;
+    SHA_CTX tempContext;
     block_char = const_cast<char*>(block.c_str());
     SHA1_Update(&context, block_char, block.length());
+    tempContext = context;
     SHA1_Final(digest, &context); 
     
-    return 1;
+    return tempContext;
 }
 
-int DeDup::getHash(string block, unsigned char* digest) {
+
+SHA_CTX DeDup::getHash(string block, unsigned char* digest) {
 	SHA_CTX context;
 	SHA1_Init(&context);
-	getHash(block, digest, context);
-	//strcpy(digest, getHash(block, context));
-	return 1;
+	context = getHash(block, digest, context);	
+	
+	return context;
 }
 
-	
 
+SHA_CTX DeDup::getNextHash(string block, unsigned char* digest, SHA_CTX context) {
+	context = getHash(block, digest, context);
+	
+	return context;
+}
