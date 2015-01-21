@@ -9,7 +9,9 @@ using namespace std;
 int main() {
         
         DeDup deDup;
-        deDup.testImp();/* deDup;
+        //deDup.testImp();
+        deDup.deDuplicate("/home/justin/temp.tar");
+        /* deDup;
         /*string string_digest = 
         cout<<string_digest;*
         unsigned char digest[SHA_DIGEST_LENGTH];

@@ -27,7 +27,9 @@
 #include "index.h"
 #include <unordered_map>
 
+#include <fstream>
 #include <iostream>
+#include <stdio.h>
 
 
 DeDup::DeDup()
@@ -60,10 +62,27 @@ void DeDup::testImp() {
 }
 
 void DeDup::deDuplicate(char fileName[]) {
-    FILE *file = fopen(fileName, "r");
+    /*FILE *file = fopen(fileName, "r");
     FILE *outFile = fopen("dedup.dat", "w");
     
     char buffer[BLOCK_S];
+    */
+    char * buffer;
+    
+    std::ifstream file (fileName, std::ifstream::binary);
+    if (file) {
+        while(!file.eof()) {
+            buffer = new char[BLOCK_S];
+            file.read(buffer, BLOCK_S - 1); // one byte less for '\000'
+            buffer[BLOCK_S-1] = '\0';
+            if(file) 
+                printf("%s\n!!!!!***************!!!!", buffer);
+            else 
+                std::cout<<"Smaller block: No Padding";
+            delete[] buffer;
+        }
+        file.close();
+    }
     
     /* append null char at the end please*/
 }
