@@ -46,11 +46,11 @@ string deDup::getHash(string block, SHA_CTX context) {
      * Pass by value preserves the original value of context 
      * between SHA1_Final(...) calls.
      * 
-     **
+     **/
     
     string digest;
-    SHA1_Update(&context, (void*)&block, strlen(block));
-    SHA1_Final((unsigned char*)&digest, &context); 
-    return digest; */
+    //SHA1_Update(&context, (void*)&block, strlen(block));
+    //SHA1_Final((unsigned char*)&digest, &context); 
+    return digest;
 }
 

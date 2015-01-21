@@ -2,6 +2,7 @@ IDIR = ../include
 CC = gcc
 CXX = g++
 CFLAGS = -Wall -I$(IDIR)
+CXXFLAGS = $(CFLAGS) -std=c++11
 
 ODIR = ../obj
 MKODIR = mkdir -p $(ODIR)
@@ -30,7 +31,7 @@ $(ODIR)/%.o: $(SDIR)/%.c $(DEPS)
 
 $(ODIR)/%.o: $(SDIR)/%.cpp $(DEPS)
 	$(MKODIR)
-	$(CXX) -c -o $@ $< $(CFLAGS)
+	$(CXX) -c -o $@ $< $(CXXFLAGS)
 
 $(_OBJ): $(OBJ)
 	
