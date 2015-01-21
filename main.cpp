@@ -4,12 +4,14 @@
 #include <stdio.h>
 #include <cstring>
 #include <iostream>
+#include <unordered_set>
 using namespace std;
 int main() {
         
         DeDup deDup;
+        deDup.testImp();/* deDup;
         /*string string_digest = 
-        cout<<string_digest;*/
+        cout<<string_digest;*
         unsigned char digest[SHA_DIGEST_LENGTH];
         unsigned char digest1[SHA_DIGEST_LENGTH];
         char block[] = "HelloWorld";
@@ -35,6 +37,6 @@ int main() {
         string dig(mdString1);
         printf("SHA1 digest: %s\n", mdString1);
         cout<<dig<<" "<<dig.length()<<" "<<sizeof(dig)<<" "<<sizeof(char);
-        
+        */
         return 0;        
 }

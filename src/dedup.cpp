@@ -24,12 +24,15 @@
 
 
 #include "dedup.h"
+#include "index.h"
+#include <unordered_map>
 
+#include <iostream>
 
 
 DeDup::DeDup()
 {
-	
+	strgIndex = t_index(BLOCK_N);
 }
 
 
@@ -38,5 +41,29 @@ DeDup::~DeDup()
     
 }
 
+void DeDup::testImp() {
+    char temp1[6];
+    char temp2[6];
+    strcpy(temp1, "HELLO");
+    std::string temp4("HELLO");
+    strcpy(temp2, temp4.c_str());
+    char temp3[] = "World";
+    node.hashNode(1, (char*)temp1);
+    std::cout<<std::get<0>(node.getNode())<<std::endl;
+    std::pair<std::string, IndexNode> retValue = node.getNode();
+    strgIndex.insert(retValue);
+    node = Index(2,(char*)temp2);
+    std::cout<<std::get<0>(node.getNode())<<std::endl;
+    //node.rehashNode((char*)temp3);
+    strgIndex.insert(node.getNode());
+    std::cout<<strgIndex[std::get<0>(node.getNode())].offsetPointer<<" "<<sizeof(strgIndex)<<" "<<sizeof(node.getNode())<<std::endl;
+}
 
-
+void DeDup::deDuplicate(char fileName[]) {
+    FILE *file = fopen(fileName, "r");
+    FILE *outFile = fopen("dedup.dat", "w");
+    
+    char buffer[BLOCK_S];
+    
+    /* append null char at the end please*/
+}

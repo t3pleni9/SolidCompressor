@@ -36,6 +36,8 @@
  * Header Definition 
  */
 #define DEDUP_H
+#define BLOCK_S 4097
+#define BLOCK_N 1000000
 
 
 /**
@@ -49,12 +51,14 @@ class DeDup
     public:
         DeDup();
         virtual ~DeDup();
-        
+        void testImp();
+        void deDuplicate(char*);
     
     private:				
         typedef std::unordered_map<std::string, IndexNode> t_index;
-        static t_index storIndex;
-        static IndexNode node;         
+        t_index strgIndex;
+        Index node;       
+          
         std::string readBlock(std::fstream);
         
 };
