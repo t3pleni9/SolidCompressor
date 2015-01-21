@@ -38,18 +38,20 @@ struct IndexNode {
     int size;
 };
 
-class deDup
+class DeDup
 {
     public:
-        deDup();
-        virtual ~deDup();
+        DeDup();
+        virtual ~DeDup();
+        int getHash(string, unsigned char*);
     
     private:
-        typedef unordered_map<string, IndexNode> t_index;
+				
+        typedef unordered_map<unsigned char*, IndexNode> t_index;
         static t_index index;
-        static string getHash(string, SHA_CTX);
-        static string readBlock(fstream);
-        static int buildNode(int /*index*/);
+        int getHash(string, unsigned char*, SHA_CTX);    
+        string readBlock(fstream);
+        int buildNode(int /*index*/);
         
         
 };

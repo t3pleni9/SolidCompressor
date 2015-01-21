@@ -37,7 +37,7 @@ $(ODIR)/%.o: $(SDIR)/%.cpp $(DEPS)
 
 test: $(OBJ)
 	$(MKBDIR)
-	$(CXX) main.cpp -o $(BINDIR)main $^ $(CFLAGS) $(LIBS)
+	$(CXX) main.cpp -o $(BINDIR)main $^ $(CXXFLAGS) $(LIBS)
 
 $(_OBJ): $(OBJ)	
 
