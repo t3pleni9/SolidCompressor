@@ -26,7 +26,7 @@
 #include <cstring>
 #include <stdio.h>
 #include <openssl/sha.h>
-#include <unordered_set>
+#include <unordered_map>
 
 #ifndef DEDUP_H
 #define DEDUP_H
@@ -34,26 +34,9 @@
 using namespace::std;
 
 struct IndexNode {
-    string hashValue;
     int offsetPointer;
     int size;
 };
-
-inline bool operator == (IndexNode const& lhs, IndexNode const& rhs)
-{
-    return (lhs.hashValue == rhs.hashValue) 
-    && (lhs.offsetPointer == rhs.offsetPointer) 
-    && (lhs.size == rhs.size); 
-}
-
-struct Hash {
-    size_t operator()(const IndexNode &index) const {
-        return index.hashValue.length();
-    }
-};
-
-
-
 
 class deDup
 {
@@ -62,7 +45,7 @@ class deDup
         virtual ~deDup();
     
     private:
-        typedef unordered_set<IndexNode, Hash> t_index;
+        typedef unordered_map<string, IndexNode> t_index;
         static t_index index;
         static string getHash(string, SHA_CTX);
         static string readBlock(fstream);
