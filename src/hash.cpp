@@ -31,7 +31,7 @@ Hash::Hash()
 }
 
 
-SHA_CTX Hash::getHash(char* block, unsigned char* digest, SHA_CTX context) {
+SHA_CTX Hash::getHash(char* block, unsigned char* digest, unsigned int blockLen, SHA_CTX context) {
     
     /**
      * 
@@ -42,7 +42,7 @@ SHA_CTX Hash::getHash(char* block, unsigned char* digest, SHA_CTX context) {
      **/
     
     SHA_CTX tempContext;
-    SHA1_Update(&context, (void*)block, strlen(block));
+    SHA1_Update(&context, (void*)block, blockLen);
     tempContext = context;
     SHA1_Final(digest, &context); 
     
@@ -55,10 +55,10 @@ SHA_CTX Hash::getHash(char* block, unsigned char* digest, SHA_CTX context) {
  * with more chunks.
  **/
  
-SHA_CTX Hash::getHash(char* block, unsigned char* digest) {
+SHA_CTX Hash::getHash(char* block, unsigned char* digest, unsigned int blockLen) {
 	SHA_CTX context;
 	SHA1_Init(&context);
-	context = getHash(block, digest, context);	
+	context = getHash(block, digest, blockLen, context);	
 	
 	return context;
 }
@@ -68,8 +68,8 @@ SHA_CTX Hash::getHash(char* block, unsigned char* digest) {
  * previous block(s)
  **/
  
-SHA_CTX Hash::getNextHash(char* block, unsigned char* digest, SHA_CTX context) {
-	context = getHash(block, digest, context);
+SHA_CTX Hash::getNextHash(char* block, unsigned char* digest, unsigned int blockLen, SHA_CTX context) {
+	context = getHash(block, digest, blockLen, context);
 	
 	return context;
 }

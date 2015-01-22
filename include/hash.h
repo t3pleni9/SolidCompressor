@@ -31,11 +31,11 @@ class Hash
 {
     public:
         Hash();
-        static SHA_CTX getHash(char*, unsigned char*);
-        static SHA_CTX getNextHash(char*, unsigned char*, SHA_CTX);
+        static SHA_CTX getHash(char*, unsigned char*, unsigned int);
+        static SHA_CTX getNextHash(char*, unsigned char*, unsigned int, SHA_CTX);
             
     private:
-        static SHA_CTX getHash(char*, unsigned char*, SHA_CTX);   
+        static SHA_CTX getHash(char*, unsigned char*, unsigned int, SHA_CTX);   
 
 };
 

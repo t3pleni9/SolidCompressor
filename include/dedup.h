@@ -36,7 +36,7 @@
  * Header Definition 
  */
 #define DEDUP_H
-#define BLOCK_S 11
+#define BLOCK_S 4096
 #define BLOCK_N 1000000
 
 

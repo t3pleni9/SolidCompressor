@@ -49,12 +49,12 @@ class Index{
         
     public:
         Index();
-        Index(unsigned int, char*);
+        Index(unsigned int, char*, unsigned int);
         
         virtual ~Index();
         
-        int hashNode(unsigned int, char*);  
-        int rehashNode(char*); 
+        int hashNode(unsigned int, char*, unsigned int);  
+        int rehashNode(char*, unsigned int); 
         std::pair<std::string, IndexNode> getNode();   
 };
 

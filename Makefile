@@ -46,4 +46,4 @@ $(_OBJ): $(OBJ)
 
 clean:
 	rm -rf $(ODIR) $(BINDIR)
-	rm -f *~ $(INCDIR)/*~
+	rm -f *~ $(INCDIR)/*~ *.tmp

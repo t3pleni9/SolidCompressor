@@ -45,30 +45,32 @@ DeDup::~DeDup()
 }
 
 void DeDup::testImp() {
-    char temp1[6];
-    char temp2[6];
-    strcpy(temp1, "HELLO");
+    char temp[] = {'h','e'};
+    char temp1[] = {'\0'};
+    char temp2[] = {'h', 'e'};
+    //strcpy(temp1, "HELLO");
     std::string temp4("HELLO");
-    strcpy(temp2, temp4.c_str());
-    char temp3[] = "World";
-    node.hashNode(1, (char*)temp1);
-    //std::cout<<std::get<0>(node.getNode())<<std::endl;
+    //strcpy(temp2, temp4.c_str());
+    char temp3[] = {'\0'};
+    node.hashNode(1, (char*)temp, 2);
+    //node.rehashNode((char*)temp1);
+    std::cout<<std::get<0>(node.getNode())<<std::endl;
     std::pair<std::string, IndexNode> retValue = node.getNode();
     strgIndex.insert(retValue);
-    node = Index(2,(char*)temp2);
-    //std::cout<<nodeExists(std::get<0>(node.getNode()))<<std::endl;
-    node.rehashNode((char*)temp3);
+    node = Index(2,(char*)temp2, 2);
+    std::cout<<nodeExists(std::get<0>(node.getNode()))<<std::endl;
+   // node.rehashNode((char*)temp3);
     nodeExists(std::get<0>(node.getNode()));
-    //std::cout<<std::get<0>(node.getNode())<<std::endl;
-    //std::cout<<"Of:"<<strgIndex["c65f99f8c5376adadddc46d5cbcf5762f9e55eb7"].offsetPointer<<std::endl;
+    std::cout<<std::get<0>(node.getNode())<<std::endl;
+    std::cout<<"Of:"<<strgIndex[std::get<0>(node.getNode())].offsetPointer<<std::endl;
     strgIndex.insert(node.getNode());
-    //std::cout<<strgIndex[std::get<0>(node.getNode())].offsetPointer<<" "<<std::get<0>(node.getNode())<<" "<<sizeof(node.getNode())<<std::endl;
+    std::cout<<strgIndex[std::get<0>(node.getNode())].offsetPointer<<" "<<std::get<0>(node.getNode())<<" "<<sizeof(node.getNode())<<std::endl;
 }
 
 bool DeDup::nodeExists(std::string hashValue) {
      
     //std::unordered_map<std::string,IndexNode>::const_iterator got = strgIndex.find (hashValue);
-    //std::cout<<"Does Not:"<<(strgIndex.find (hashValue) == strgIndex.end())<<std::endl;
+    std::cout<<"Does Not:"<<(strgIndex.find (hashValue) == strgIndex.end())<<std::endl;
     return !(strgIndex.find (hashValue) == strgIndex.end());
 }
 
@@ -92,36 +94,36 @@ void DeDup::deDuplicate(char fileName[]) {
         while(!file.eof()) {
             if(blockCounter == 1) {
                 buffer = new char[BLOCK_S];
-                file.read(buffer, BLOCK_S - 1); // one byte less for '\000'
-                buffer[BLOCK_S-1] = '\0';
+                file.read(buffer, BLOCK_S); // one byte less for '\000'
+                //buffer[BLOCK_S-1] = '\0';
             }
             if(file) {
                 if(!exists) {
-                    node = Index(blockCounter, buffer);
-                    //std::cout<<"BC I:"<<std::get<1>(node.getNode()).offsetPointer<<std::endl;
+                    node = Index(blockCounter, buffer, BLOCK_S);
+                    std::cout<<"BC I:"<<std::get<1>(node.getNode()).offsetPointer<<std::endl;
                 } else {
-                    node.rehashNode(buffer);
+                    node.rehashNode(buffer, BLOCK_S);
                 }
-                //std::cout<<std::get<0>(node.getNode())<<" BC:"<<blockCounter<<std::endl;
+                std::cout<<std::get<0>(node.getNode())<<" BC:"<<blockCounter<<std::endl;
                 if(nodeExists(std::get<0>(node.getNode()))) {
                     exists = true;
                 } else {
                     strgIndex.insert(node.getNode());
                     if(!exists) {
-                        ofile.write(buffer, BLOCK_S - 1);
+                        ofile.write(buffer, BLOCK_S);
                         
                         delete[] buffer;
                         buffer = new char[BLOCK_S];
-                        file.read(buffer, BLOCK_S - 1); // one byte less for '\000'
-                        buffer[BLOCK_S-1] = '\0';
+                        file.read(buffer, BLOCK_S); // one byte less for '\000'
+                        //buffer[BLOCK_S-1] = '\0';
                         
                         if(file) {
-                            node.rehashNode(buffer);                            
+                            node.rehashNode(buffer, BLOCK_S);                            
                             assert ( !nodeExists(std::get<0>(node.getNode())) );                            
                             strgIndex.insert(node.getNode());
-                            //std::cout<<std::get<0>(node.getNode())<<" "<<strgIndex[std::get<0>(node.getNode())].offsetPointer<<std::endl;
+                            std::cout<<std::get<0>(node.getNode())<<" "<<strgIndex[std::get<0>(node.getNode())].offsetPointer<<std::endl;
                         } else {
-                            ofile.write(buffer, BLOCK_S - 1);
+                            ofile.write(buffer, BLOCK_S);
                         }                        
                     } else {
                         /**
@@ -130,13 +132,13 @@ void DeDup::deDuplicate(char fileName[]) {
                         exists = false;
                         delete[] buffer;
                         buffer = new char[BLOCK_S];
-                        file.read(buffer, BLOCK_S - 1); // one byte less for '\000'
-                        buffer[BLOCK_S-1] = '\0';
+                        file.read(buffer, BLOCK_S); // one byte less for '\000'
+                        //buffer[BLOCK_S-1] = '\0';
                      }
                  }            
                      
             } else {
-                ofile.write(buffer, BLOCK_S - 1);
+                ofile.write(buffer, BLOCK_S);
             }
             
             //delete[] buffer;

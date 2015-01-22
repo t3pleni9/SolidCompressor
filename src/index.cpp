@@ -31,23 +31,23 @@ Index::Index()
    
 }
 
-Index::Index(unsigned int _l_index, char* block) {
-    hashNode(_l_index, block);
+Index::Index(unsigned int _l_index, char* block, unsigned int blockLen) {
+    hashNode(_l_index, block, blockLen);
 }
 
 Index::~Index() { }
 
-int Index::hashNode(unsigned int _l_index, char* block) {
+int Index::hashNode(unsigned int _l_index, char* block, unsigned int blockLen) {
     index.offsetPointer = _l_index;
     index.size = 0;
-    indexContext = Hash::getHash(block, (unsigned char*)hashValue);
+    indexContext = Hash::getHash(block, (unsigned char*)hashValue, blockLen);
        
     return 1; //TODO: modify for errors
 }
 
-int Index::rehashNode(char* block) {
+int Index::rehashNode(char* block, unsigned int blockLen) {
     index.size++;
-    indexContext = Hash::getNextHash(block, (unsigned char*)hashValue, indexContext);
+    indexContext = Hash::getNextHash(block, (unsigned char*)hashValue, blockLen, indexContext);
     
     return 1; //TODO: modify for errors
 }
