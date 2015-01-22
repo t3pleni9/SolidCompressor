@@ -28,16 +28,16 @@
 
 Index::Index()
 {
-    
+   
 }
 
-Index::Index(int _l_index, char* block) {
+Index::Index(unsigned int _l_index, char* block) {
     hashNode(_l_index, block);
 }
 
 Index::~Index() { }
 
-int Index::hashNode(int _l_index, char* block) {
+int Index::hashNode(unsigned int _l_index, char* block) {
     index.offsetPointer = _l_index;
     index.size = 0;
     indexContext = Hash::getHash(block, (unsigned char*)hashValue);

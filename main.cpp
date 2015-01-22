@@ -10,7 +10,7 @@ int main() {
         
         DeDup deDup;
         //deDup.testImp();
-        deDup.deDuplicate("/home/justin/temp.tar");
+        deDup.deDuplicate("/home/justin/temp2");
         /* deDup;
         /*string string_digest = 
         cout<<string_digest;*

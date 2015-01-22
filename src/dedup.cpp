@@ -30,11 +30,12 @@
 #include <fstream>
 #include <iostream>
 #include <stdio.h>
+#include <assert.h>
 
 
 DeDup::DeDup()
 {
-	strgIndex = t_index(BLOCK_N);
+	//strgIndex = t_index(BLOCK_N);
 }
 
 
@@ -51,14 +52,28 @@ void DeDup::testImp() {
     strcpy(temp2, temp4.c_str());
     char temp3[] = "World";
     node.hashNode(1, (char*)temp1);
-    std::cout<<std::get<0>(node.getNode())<<std::endl;
+    //std::cout<<std::get<0>(node.getNode())<<std::endl;
     std::pair<std::string, IndexNode> retValue = node.getNode();
     strgIndex.insert(retValue);
     node = Index(2,(char*)temp2);
-    std::cout<<std::get<0>(node.getNode())<<std::endl;
-    //node.rehashNode((char*)temp3);
+    //std::cout<<nodeExists(std::get<0>(node.getNode()))<<std::endl;
+    node.rehashNode((char*)temp3);
+    nodeExists(std::get<0>(node.getNode()));
+    //std::cout<<std::get<0>(node.getNode())<<std::endl;
+    //std::cout<<"Of:"<<strgIndex["c65f99f8c5376adadddc46d5cbcf5762f9e55eb7"].offsetPointer<<std::endl;
     strgIndex.insert(node.getNode());
-    std::cout<<strgIndex[std::get<0>(node.getNode())].offsetPointer<<" "<<sizeof(strgIndex)<<" "<<sizeof(node.getNode())<<std::endl;
+    //std::cout<<strgIndex[std::get<0>(node.getNode())].offsetPointer<<" "<<std::get<0>(node.getNode())<<" "<<sizeof(node.getNode())<<std::endl;
+}
+
+bool DeDup::nodeExists(std::string hashValue) {
+     
+    //std::unordered_map<std::string,IndexNode>::const_iterator got = strgIndex.find (hashValue);
+    //std::cout<<"Does Not:"<<(strgIndex.find (hashValue) == strgIndex.end())<<std::endl;
+    return !(strgIndex.find (hashValue) == strgIndex.end());
+}
+
+int DeDup::readBlock(std::fstream* file, char* block, int block_s, int offset) {
+    return 0;
 }
 
 void DeDup::deDuplicate(char fileName[]) {
@@ -68,20 +83,68 @@ void DeDup::deDuplicate(char fileName[]) {
     char buffer[BLOCK_S];
     */
     char * buffer;
+    unsigned int blockCounter = 1;
+    bool exists = false;
     
     std::ifstream file (fileName, std::ifstream::binary);
+    std::ofstream ofile ("dedup.tmp", std::ofstream::binary);
     if (file) {
         while(!file.eof()) {
-            buffer = new char[BLOCK_S];
-            file.read(buffer, BLOCK_S - 1); // one byte less for '\000'
-            buffer[BLOCK_S-1] = '\0';
-            if(file) 
-                printf("%s\n!!!!!***************!!!!", buffer);
-            else 
-                std::cout<<"Smaller block: No Padding";
-            delete[] buffer;
+            if(blockCounter == 1) {
+                buffer = new char[BLOCK_S];
+                file.read(buffer, BLOCK_S - 1); // one byte less for '\000'
+                buffer[BLOCK_S-1] = '\0';
+            }
+            if(file) {
+                if(!exists) {
+                    node = Index(blockCounter, buffer);
+                    //std::cout<<"BC I:"<<std::get<1>(node.getNode()).offsetPointer<<std::endl;
+                } else {
+                    node.rehashNode(buffer);
+                }
+                //std::cout<<std::get<0>(node.getNode())<<" BC:"<<blockCounter<<std::endl;
+                if(nodeExists(std::get<0>(node.getNode()))) {
+                    exists = true;
+                } else {
+                    strgIndex.insert(node.getNode());
+                    if(!exists) {
+                        ofile.write(buffer, BLOCK_S - 1);
+                        
+                        delete[] buffer;
+                        buffer = new char[BLOCK_S];
+                        file.read(buffer, BLOCK_S - 1); // one byte less for '\000'
+                        buffer[BLOCK_S-1] = '\0';
+                        
+                        if(file) {
+                            node.rehashNode(buffer);                            
+                            assert ( !nodeExists(std::get<0>(node.getNode())) );                            
+                            strgIndex.insert(node.getNode());
+                            //std::cout<<std::get<0>(node.getNode())<<" "<<strgIndex[std::get<0>(node.getNode())].offsetPointer<<std::endl;
+                        } else {
+                            ofile.write(buffer, BLOCK_S - 1);
+                        }                        
+                    } else {
+                        /**
+                         * Generate Index
+                         **/
+                        exists = false;
+                        delete[] buffer;
+                        buffer = new char[BLOCK_S];
+                        file.read(buffer, BLOCK_S - 1); // one byte less for '\000'
+                        buffer[BLOCK_S-1] = '\0';
+                     }
+                 }            
+                     
+            } else {
+                ofile.write(buffer, BLOCK_S - 1);
+            }
+            
+            //delete[] buffer;
+            blockCounter++;
         }
+        delete[] buffer;
         file.close();
+        ofile.close();
     }
     
     /* append null char at the end please*/

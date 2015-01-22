@@ -35,8 +35,8 @@
  * Stores the index of block(s) on the file.
  */
 struct IndexNode {
-    int offsetPointer; /**< offset index */
-    int size; /**<  number of blocks*/
+    unsigned int offsetPointer; /**< offset index */
+    unsigned int size; /**<  number of blocks*/
 };
 
 
@@ -49,11 +49,11 @@ class Index{
         
     public:
         Index();
-        Index(int, char*);
+        Index(unsigned int, char*);
         
         virtual ~Index();
         
-        int hashNode(int, char*);  
+        int hashNode(unsigned int, char*);  
         int rehashNode(char*); 
         std::pair<std::string, IndexNode> getNode();   
 };

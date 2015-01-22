@@ -36,7 +36,7 @@
  * Header Definition 
  */
 #define DEDUP_H
-#define BLOCK_S 4097
+#define BLOCK_S 11
 #define BLOCK_N 1000000
 
 
@@ -59,7 +59,8 @@ class DeDup
         t_index strgIndex;
         Index node;       
           
-        std::string readBlock(std::fstream);
+        bool nodeExists(std::string);
+        int readBlock(std::fstream*, char*, int, int);
         
 };
 
