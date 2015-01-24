@@ -1,7 +1,7 @@
 IDIR = ./include
 CC = gcc
 CXX = g++
-DBGFLAGS = -g
+DBGFLAGS = -pg
 CFLAGS = -Wall -I$(IDIR)
 CXXFLAGS = $(DBGFLAGS) $(CFLAGS) -std=c++11 
 
@@ -46,4 +46,4 @@ $(_OBJ): $(OBJ)
 
 clean:
 	rm -rf $(ODIR) $(BINDIR)
-	rm -f *~ $(INCDIR)/*~ *.tmp
+	rm -f *~ $(INCDIR)/*~ *.tmp temp *.out

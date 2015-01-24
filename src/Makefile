@@ -1,7 +1,7 @@
 IDIR = ../include
 CC = gcc
 CXX = g++
-DBGFLAGS = -g
+DBGFLAGS = -pg
 CFLAGS = -Wall -I$(IDIR)
 CXXFLAGS = $(DBGFLAGS) $(CFLAGS) -std=c++11 
 
