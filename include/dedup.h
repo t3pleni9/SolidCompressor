@@ -42,7 +42,7 @@
  * @brief 
  * Block Size
  **/
-#define BLOCK_S 40
+#define BLOCK_S 4000
 
 /**
  * @brief 
@@ -54,7 +54,7 @@
  * @brief 
  * Segment Size
  **/
-#define SEG_S 200000
+#define SEG_S 200000000
 
 /**
  * @brief 

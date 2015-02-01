@@ -121,7 +121,7 @@ void DeDup::deDuplicate(char fileName[]) {
                     if(bufferSize) {
                         // TODO: Generate Index
                         ofile.write((buffer+curPointer), bufferSize - curPointer);
-                        std::cout<<"Buffer offset: "<<bufferSize<<" "<<curPointer<<" "<<segLength<<std::endl;
+                        //std::cout<<"Buffer offset: "<<bufferSize<<" "<<curPointer<<" "<<segLength<<std::endl;
                         curPointer = bufferSize;
                         bufferSize = 0;
                     }
