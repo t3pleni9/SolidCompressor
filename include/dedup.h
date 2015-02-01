@@ -31,13 +31,35 @@
 #include "index.h"
 
 #ifndef DEDUP_H
+
 /**
  * @brief 
  * Header Definition 
  */
 #define DEDUP_H
-#define BLOCK_S 4000
-#define SEG_S 200000000
+
+/**
+ * @brief 
+ * Block Size
+ **/
+#define BLOCK_S 40
+
+/**
+ * @brief 
+ * (delta)d = blockSize / x
+ **/
+#define BLOCK_X 8
+
+/**
+ * @brief 
+ * Segment Size
+ **/
+#define SEG_S 200000
+
+/**
+ * @brief 
+ * Initialization block numbers for dictionary
+ **/
 #define BLOCK_N 1000000
 
 
@@ -59,7 +81,8 @@ class DeDup
         typedef std::unordered_map<std::string, IndexNode> t_index;
         t_index strgIndex;
         Index node;       
-          
+        
+        int deDuplicateSubBlocks(char*, int, int, int); 
         bool nodeExists(std::string);
         int readBlock(std::fstream*, char*, int, int);
         

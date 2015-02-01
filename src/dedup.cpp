@@ -76,11 +76,31 @@ int DeDup::readBlock(std::fstream* file, char* block, int block_s, int offset) {
     return 0;
 }
 
+int DeDup::deDuplicateSubBlocks(char* buffer, int curPointer, int inc, int segLength) {
+        int nextBlockPointer = curPointer + (inc * BLOCK_X);
+        curPointer += inc;
+        segLength -= inc;
+        int blockCounter = 1;
+        
+        while(curPointer != nextBlockPointer && BLOCK_S < segLength) {
+            Index subNode(blockCounter, (buffer + curPointer), BLOCK_S);            
+            if(nodeExists(std::get<0>(subNode.getNode()))) {
+                return curPointer;
+            } else {
+                curPointer += inc;
+                segLength -= inc;
+            }
+        }
+        return 0;//TODO: return Error cases
+} 
+
 void DeDup::deDuplicate(char fileName[]) {
     
     char * buffer;
     unsigned int blockCounter = 1;
-    bool exists = false;
+    bool exists = false;    
+    const int inc = BLOCK_S / BLOCK_X;
+    int bufferSize = 0;
     
     std::ifstream file (fileName, std::ifstream::binary);
     std::ofstream ofile ("dedup.tmp", std::ofstream::binary);
@@ -95,6 +115,13 @@ void DeDup::deDuplicate(char fileName[]) {
             if(BLOCK_S < segLength) {
                 if(!exists) {
                     node = Index(blockCounter, (buffer + curPointer), BLOCK_S);
+                    bufferSize = deDuplicateSubBlocks(buffer, curPointer, inc, segLength);
+                    if(bufferSize) {
+                        // TODO: Generate Index
+                        ofile.write((buffer+curPointer), bufferSize - curPointer);
+                        curPointer = bufferSize;
+                    }
+                    
                     //std::cout<<"BC I:"<<std::get<1>(node.getNode()).offsetPointer<<std::endl;
                 } else {
                     node.rehashNode((buffer + curPointer), BLOCK_S);                    
@@ -121,9 +148,7 @@ void DeDup::deDuplicate(char fileName[]) {
                         }
                                                 
                     } else {
-                        /**
-                         * Generate Index
-                         **/
+                        //TODO: Generate Index
                         exists = false;
                         curPointer += BLOCK_S;
                         segLength -= BLOCK_S;
