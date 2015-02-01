@@ -76,19 +76,21 @@ int DeDup::readBlock(std::fstream* file, char* block, int block_s, int offset) {
     return 0;
 }
 
-int DeDup::deDuplicateSubBlocks(char* buffer, int curPointer, int inc, int segLength) {
+int DeDup::deDuplicateSubBlocks(char* buffer, int curPointer, int inc, long unsigned int* segLength) {
         int nextBlockPointer = curPointer + (inc * BLOCK_X);
+        int tempSeg = *segLength;
         curPointer += inc;
-        segLength -= inc;
+        tempSeg -= inc;
         int blockCounter = 1;
         
-        while(curPointer != nextBlockPointer && BLOCK_S < segLength) {
+        while(curPointer != nextBlockPointer && BLOCK_S < tempSeg) {
             Index subNode(blockCounter, (buffer + curPointer), BLOCK_S);            
             if(nodeExists(std::get<0>(subNode.getNode()))) {
+                *segLength = tempSeg;
                 return curPointer;
             } else {
                 curPointer += inc;
-                segLength -= inc;
+                tempSeg -= inc;
             }
         }
         return 0;//TODO: return Error cases
@@ -115,11 +117,13 @@ void DeDup::deDuplicate(char fileName[]) {
             if(BLOCK_S < segLength) {
                 if(!exists) {
                     node = Index(blockCounter, (buffer + curPointer), BLOCK_S);
-                    bufferSize = deDuplicateSubBlocks(buffer, curPointer, inc, segLength);
+                    bufferSize = deDuplicateSubBlocks(buffer, curPointer, inc, &segLength);
                     if(bufferSize) {
                         // TODO: Generate Index
                         ofile.write((buffer+curPointer), bufferSize - curPointer);
+                        std::cout<<"Buffer offset: "<<bufferSize<<" "<<curPointer<<" "<<segLength<<std::endl;
                         curPointer = bufferSize;
+                        bufferSize = 0;
                     }
                     
                     //std::cout<<"BC I:"<<std::get<1>(node.getNode()).offsetPointer<<std::endl;

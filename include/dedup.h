@@ -82,7 +82,7 @@ class DeDup
         t_index strgIndex;
         Index node;       
         
-        int deDuplicateSubBlocks(char*, int, int, int); 
+        int deDuplicateSubBlocks(char*, int, int, long unsigned int*); 
         bool nodeExists(std::string);
         int readBlock(std::fstream*, char*, int, int);
         
