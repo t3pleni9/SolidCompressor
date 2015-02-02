@@ -10,7 +10,7 @@ int main() {
         
         DeDup deDup;
         //deDup.testImp();
-        deDup.deDuplicate((char*)"/home/justin/temp4");
+        deDup.deDuplicate((char*)"/home/cse/temp4");
              
         return 0;        
 }
