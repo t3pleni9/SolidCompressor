@@ -120,6 +120,7 @@ void DeDup::deDuplicate(char fileName[]) {
                     bufferSize = deDuplicateSubBlocks(buffer, curPointer, inc, &segLength);
                     if(bufferSize) {
                         // TODO: Generate Index
+                        node.generateIndex();
                         ofile.write((buffer+curPointer), bufferSize - curPointer);
                         //std::cout<<"Buffer offset: "<<bufferSize<<" "<<curPointer<<" "<<segLength<<std::endl;
                         curPointer = bufferSize;
@@ -153,6 +154,7 @@ void DeDup::deDuplicate(char fileName[]) {
                                                 
                     } else {
                         //TODO: Generate Index
+                        node.generateIndex();
                         exists = false;
                         curPointer += BLOCK_S;
                         segLength -= BLOCK_S;

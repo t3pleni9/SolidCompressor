@@ -25,6 +25,8 @@
 #include "index.h"
 #include "hash.h"
 
+#include <iostream>
+
 
 Index::Index()
 {
@@ -60,5 +62,10 @@ std::pair<std::string, IndexNode> Index::getNode() {
     std::string digest(mdString);
     
     return (std::pair<std::string, IndexNode>(digest, index));
+}
+
+int Index::generateIndex() {
+    std::cout<<index.offsetPointer<<" "<<index.size<<std::endl;
+    return 0;
 }
 

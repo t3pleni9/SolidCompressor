@@ -56,6 +56,7 @@ class Index{
         int hashNode(unsigned int, char*, unsigned int);  
         int rehashNode(char*, unsigned int); 
         std::pair<std::string, IndexNode> getNode();   
+        int generateIndex();
 };
 
 #endif /* INDEX_H */ 
