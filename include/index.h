@@ -46,6 +46,8 @@ class Index{
         unsigned char hashValue[SHA_DIGEST_LENGTH]; /**< Hash value of block(s)  */
         SHA_CTX indexContext;
         IndexNode index; /**<  On disk index of block(s)*/ 
+        unsigned int parentBlock;
+        unsigned int parentSize;
         
     public:
         Index();
@@ -56,7 +58,9 @@ class Index{
         int hashNode(unsigned int, char*, unsigned int);  
         int rehashNode(char*, unsigned int); 
         std::pair<std::string, IndexNode> getNode();   
-        int generateIndex();
+        int generateIndex(int);
+        
+        void setParent(unsigned int, unsigned int);
 };
 
 #endif /* INDEX_H */ 

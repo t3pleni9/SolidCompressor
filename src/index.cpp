@@ -30,14 +30,22 @@
 
 Index::Index()
 {
-   
+    parentBlock = 0;
+    parentSize = 0;
 }
 
 Index::Index(unsigned int _l_index, char* block, unsigned int blockLen) {
+    parentBlock = 0;
+    parentSize = 0;
     hashNode(_l_index, block, blockLen);
 }
 
 Index::~Index() { }
+
+void Index::setParent(unsigned int pBlock, unsigned int pSize) {
+    parentBlock = pBlock;
+    parentSize = pSize;
+}
 
 int Index::hashNode(unsigned int _l_index, char* block, unsigned int blockLen) {
     index.offsetPointer = _l_index;
@@ -64,8 +72,8 @@ std::pair<std::string, IndexNode> Index::getNode() {
     return (std::pair<std::string, IndexNode>(digest, index));
 }
 
-int Index::generateIndex() {
-    std::cout<<index.offsetPointer<<" "<<index.size<<std::endl;
+int Index::generateIndex(int type) {
+    std::cout<<index.offsetPointer<<" P"<<parentBlock<<" "<<index.size<<" p"<<parentSize<<" "<<type<<std::endl;
     return 0;
 }
 
