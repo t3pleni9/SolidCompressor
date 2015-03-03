@@ -21,6 +21,7 @@
  * 
  */
 
+//TODO:Include index in the deduplicated file.
 
 
 #include "dedup.h"
@@ -35,34 +36,13 @@
 
 DeDup::DeDup()
 {
-	strgIndex = t_index(BLOCK_N);
+	
 }
 
 
 DeDup::~DeDup()
 {
     
-}
-
-void DeDup::testImp() {
-    char temp[] = {"HELLO"};
-    char temp1[] = {"WORLD"};
-    char temp2[] = {"HELLOWORLD"};
-    char temp3[] = {"helloworld"};
- 
-    node.hashNode(1, (char*)temp, strlen(temp));
-    
-    std::cout<<std::get<0>(node.getNode())<<std::endl;
-    std::pair<std::string, IndexNode> retValue = node.getNode();
-    strgIndex.insert(retValue);
-    node.rehashNode((char*)temp1, strlen(temp1));
-    strgIndex.insert(node.getNode());
-    node = Index(2,(char*)temp2, strlen(temp2));
-    std::cout<<"Exists temp2:"<<nodeExists(std::get<0>(node.getNode()))<<std::endl;
-    node.hashNode(3, (char*)temp3, strlen(temp3));
-    std::cout<<"Exists temp3:"<<nodeExists(std::get<0>(node.getNode()))<<std::endl;
-    strgIndex.insert(node.getNode());
-    std::cout<<strgIndex[std::get<0>(node.getNode())].offsetPointer<<" "<<std::get<0>(node.getNode())<<" "<<sizeof(node.getNode())<<std::endl;
 }
 
 bool DeDup::nodeExists(std::string hashValue) {
@@ -113,21 +93,21 @@ void DeDup::deDuplicate(char fileName[]) {
         //const unsigned long int SEG = segLength;
         unsigned long int curPointer = 0;
         
-        while(BLOCK_S < segLength) {
+        while(segLength > 0) {
             
             if(BLOCK_S < segLength) {
+                //std::cout<<"Buffer offset: "<<bufferSize<<" "<<curPointer<<" "<<segLength<<std::endl;
                 if(!exists) {
-                    node = Index(blockCounter, (buffer + curPointer), BLOCK_S);
                     bufferSize = deDuplicateSubBlocks(buffer, curPointer, inc, &segLength);
                     if(bufferSize) {
-                        // TODO: Generate Index
-                        node.generateIndex(0);
+                        // Generate Index
+                        Index::generateIndex(node.getParentIndex(),curPointer, 0, bufferSize - curPointer);
                         ofile.write((buffer+curPointer), bufferSize - curPointer);
-                        //std::cout<<"Buffer offset: "<<bufferSize<<" "<<curPointer<<" "<<segLength<<std::endl;
+                        
                         curPointer = bufferSize;
                         bufferSize = 0;
                     }
-                    
+                    node = Index(curPointer, (buffer + curPointer), BLOCK_S);
                     //std::cout<<"BC I:"<<std::get<1>(node.getNode()).offsetPointer<<std::endl;
                 } else {
                     node.rehashNode((buffer + curPointer), BLOCK_S);
@@ -137,7 +117,13 @@ void DeDup::deDuplicate(char fileName[]) {
                 if(nodeExists(std::get<0>(node.getNode()))) {
                     tempNode = strgIndex.find (std::get<0>(node.getNode()));
                     node.setParent(tempNode->second.offsetPointer, tempNode->second.size);
+                    //std::cout<<"BC I:"<<std::get<1>(node.getNode()).offsetPointer<<" "<<segLength<<std::endl;
+                    curPointer += BLOCK_S;
+                    segLength -= BLOCK_S;
                     exists = true;
+                    if(BLOCK_S > segLength) {
+                        Index::generateIndex(node.getParentIndex(),node.getIndexNode().offsetPointer, 1, 0);
+                    }
                 } else {                    
                     strgIndex.insert(node.getNode());                    
                     if(!exists) {
@@ -149,26 +135,27 @@ void DeDup::deDuplicate(char fileName[]) {
                         if(BLOCK_S < segLength) {
                             node.rehashNode((buffer + curPointer), BLOCK_S);  
                             assert ( !nodeExists(std::get<0>(node.getNode())) );                            
-                            strgIndex.insert(node.getNode());
-                            //std::cout<<std::get<0>(node.getNode())<<" "<<strgIndex[std::get<0>(node.getNode())].offsetPointer<<std::endl;
+                            strgIndex.insert(node.getNode());                            
                         } else {
                             //last block
                             ofile.write((buffer + curPointer), segLength);
                         }
                                                 
                     } else {
-                        //TODO: Generate Index
-                        node.generateIndex(1);
+                        //Generate Index
+                        Index::generateIndex(node.getParentIndex(),node.getIndexNode().offsetPointer, 1, 0);
                         
                         exists = false;
-                        curPointer += BLOCK_S;
-                        segLength -= BLOCK_S;
+                        //curPointer += BLOCK_S;
+                        //segLength -= BLOCK_S;
                      }
                  }            
                      
             } else {
                 //last block
                 ofile.write((buffer + curPointer), segLength);
+                Index::generateIndex(node.getParentIndex(),curPointer, 0, segLength);  
+                segLength -= segLength;              
             }
             
             blockCounter++;
@@ -177,5 +164,51 @@ void DeDup::deDuplicate(char fileName[]) {
         delete[] buffer;
         file.close();
         ofile.close();
+        Index::writeIndex("index");
     }
 }
+
+void DeDup::duplicate(char fileName[]) {
+    
+    char *buffer, *inBuffer;
+    Index temp;
+    std::ifstream file ("dedup.tmp", std::ifstream::ate |std::ifstream::binary);
+    unsigned long int fileSize = file.tellg();
+    file.close();
+    file.open("dedup.tmp", std::ifstream::binary);
+    std::ofstream ofile (fileName, std::ofstream::binary);
+    if (file) {
+        Index::readIndex("index");
+        buffer = new char[SEG_S];
+        inBuffer = new char[fileSize];
+        
+        file.read(inBuffer, fileSize);     
+           
+        unsigned long int curPointer = 0;
+        unsigned long int inBufPtr = 0;
+        IndexHeader node;
+        while(curPointer <= SEG_S) {
+            int exists = Index::getIndexHeader(curPointer, &node);
+            if(exists) {
+                if(node.type == 0 ) {
+                    memcpy((buffer + curPointer), (inBuffer + inBufPtr), node.size);
+                    curPointer += node.size;
+                    inBufPtr += node.size;
+                    
+                } else {
+                    memcpy((buffer + curPointer), (buffer + node.block), (node.size+1) * BLOCK_S);
+                    curPointer += (node.size+1) * BLOCK_S;
+                }
+            } else {
+                memcpy((buffer + curPointer), (inBuffer + inBufPtr), BLOCK_S);
+                curPointer += BLOCK_S;
+                inBufPtr += BLOCK_S;
+                       
+            }   
+        }     
+    }
+    ofile.write(buffer, SEG_S);
+    ofile.close();
+    file.close();
+}
+        

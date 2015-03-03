@@ -26,6 +26,7 @@
 #include <stdio.h>
 #include <openssl/sha.h>
 #include <unordered_map>
+#include <map>
 
 #ifndef INDEX_H
 #define INDEX_H
@@ -39,28 +40,40 @@ struct IndexNode {
     unsigned int size; /**<  number of blocks*/
 };
 
-
+struct IndexHeader {
+    unsigned int offsetPointer;
+    unsigned int block;
+    unsigned int size;
+    unsigned int type:2;    
+};
 class Index{
     
     private:
         unsigned char hashValue[SHA_DIGEST_LENGTH]; /**< Hash value of block(s)  */
         SHA_CTX indexContext;
-        IndexNode index; /**<  On disk index of block(s)*/ 
-        unsigned int parentBlock;
-        unsigned int parentSize;
+        IndexHeader parentIndex; /**<  On disk index of block(s)*/ 
+        IndexNode index;
+        
+        typedef std::unordered_map<unsigned int, IndexHeader> t_index;
+        static t_index headerIndex;
         
     public:
         Index();
         Index(unsigned int, char*, unsigned int);
         
         virtual ~Index();
-        
+        IndexHeader getParentIndex();
         int hashNode(unsigned int, char*, unsigned int);  
         int rehashNode(char*, unsigned int); 
         std::pair<std::string, IndexNode> getNode();   
-        int generateIndex(int);
-        
         void setParent(unsigned int, unsigned int);
+        IndexNode getIndexNode();        
+        
+        static int generateIndex(IndexHeader,unsigned int, int, int);   
+        static int writeIndex(const char*);
+        static int readIndex(const char*);
+        static int getIndexHeader(unsigned int, IndexHeader*);
+        static void printIndex();
 };
 
 #endif /* INDEX_H */ 

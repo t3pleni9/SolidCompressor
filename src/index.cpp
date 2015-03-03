@@ -26,25 +26,28 @@
 #include "hash.h"
 
 #include <iostream>
+#include <assert.h>
+#include <fstream>
 
+Index::t_index Index::headerIndex = t_index();
 
 Index::Index()
 {
-    parentBlock = 0;
-    parentSize = 0;
+    parentIndex.block = 0;
+    parentIndex.size = 0;
 }
 
 Index::Index(unsigned int _l_index, char* block, unsigned int blockLen) {
-    parentBlock = 0;
-    parentSize = 0;
+    parentIndex.block = 0;
+    parentIndex.size = 0;
     hashNode(_l_index, block, blockLen);
 }
 
 Index::~Index() { }
 
 void Index::setParent(unsigned int pBlock, unsigned int pSize) {
-    parentBlock = pBlock;
-    parentSize = pSize;
+    parentIndex.block = pBlock;
+    parentIndex.size = pSize;
 }
 
 int Index::hashNode(unsigned int _l_index, char* block, unsigned int blockLen) {
@@ -72,8 +75,66 @@ std::pair<std::string, IndexNode> Index::getNode() {
     return (std::pair<std::string, IndexNode>(digest, index));
 }
 
-int Index::generateIndex(int type) {
-    std::cout<<index.offsetPointer<<" P"<<parentBlock<<" "<<index.size<<" p"<<parentSize<<" "<<type<<std::endl;
+IndexHeader Index::getParentIndex() {
+    return parentIndex;
+}
+
+IndexNode Index::getIndexNode() {
+    return index;
+}
+
+int Index::generateIndex(IndexHeader node,unsigned int curBlock, int type, int buffer=0) {
+    
+    node.offsetPointer = curBlock;
+    node.type = type;
+    if(!type) {
+        node.size = buffer;
+        node.block = 0;
+    }
+    
+    assert (Index::headerIndex.find (curBlock) == Index::headerIndex.end());                            
+    Index::headerIndex.insert(std::pair<unsigned int, IndexHeader>(curBlock, node));
+    
     return 0;
+}
+
+int Index::writeIndex(const char* fileName) {
+    
+    std::ofstream ofile (fileName, std::ofstream::binary);
+    for(auto node:Index::headerIndex) {
+        ofile.write((char *)&node.second, sizeof(IndexHeader));
+    }
+    ofile.close();
+    
+    return 0;//TODO:Error cases to be included.
+}
+
+int Index::readIndex(const char* fileName) {
+    std::ifstream ifile (fileName, std::ofstream::binary);
+    IndexHeader node;
+    while(ifile) {
+        if(ifile.eof()) 
+            break;
+        ifile.read((char *)&node, sizeof(IndexHeader));
+        Index::headerIndex.insert(std::pair<unsigned int, IndexHeader>(node.offsetPointer, node));
+    }
+    ifile.close();
+    return 0;//TODO: Error cases to be included.
+}
+
+int Index::getIndexHeader(unsigned int key, IndexHeader* node) {
+    std::unordered_map<unsigned int,IndexHeader>::const_iterator got = Index::headerIndex.find (key);
+    if(got == Index::headerIndex.end()) {
+        return 0;
+    } else {
+        *node = got->second;
+        return 1;
+    }
+}
+
+void Index::printIndex() {
+    std::map<unsigned int, IndexHeader> ordered(Index::headerIndex.begin(), Index::headerIndex.end());
+    for ( auto it : ordered )
+        std::cout << " " << it.first << " " << it.second.block<<" " << it.second.size<<" " << it.second.type<< std::endl;
 }
 
