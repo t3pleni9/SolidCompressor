@@ -108,8 +108,7 @@ int Index::writeIndex(char* index) {
         offset += sizeof(IndexHeader);
         size++;
     }
-    
-    Index::headerIndex.clear();
+  
     memcpy((index), (char*)&size, sizeof(unsigned int));
     //0: Error, nonzero: no Error
     return (offset + intSize);
@@ -119,11 +118,10 @@ int Index::readIndex(char* index) {
     
     unsigned int offset = 0;
     unsigned int index_s = 0;
-    unsigned int size = 0;
     IndexHeader node;
     memcpy((char*)&index_s, index, sizeof(unsigned int));
     offset = index_s ? sizeof(unsigned int) :  0;
-    size = index_s;
+    
     while(index_s) {
         memcpy((char*)&node, (index + offset), sizeof(IndexHeader));
         offset += sizeof(IndexHeader);
@@ -132,7 +130,7 @@ int Index::readIndex(char* index) {
     }
     
     //1: No error, 0: error
-    return ((offset / sizeof(IndexHeader)) == size);
+    return offset;
 }
 
 int Index::getIndexHeader(unsigned int key, IndexHeader* node) {

@@ -74,15 +74,15 @@ class DeDup
     public:
         DeDup();
         virtual ~DeDup();
-        void deDuplicate(char*, char *, unsigned long int);
-        void duplicate(char*);
+        unsigned long int deDuplicate(char*, char *, unsigned long int);
+        void duplicate(char*, char*);
     
     private:				
         typedef std::unordered_map<std::string, IndexNode> t_index;
         t_index strgIndex;
         Index node;       
         
-        int deDuplicateSubBlocks(char*, int, int, long unsigned int*); 
+        int deDuplicateSubBlocks(char*, int, int, unsigned long int*); 
         bool nodeExists(std::string);
         int readBlock(std::fstream*, char*, int, int);
         
