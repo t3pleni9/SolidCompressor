@@ -70,9 +70,10 @@ class Index{
         IndexNode getIndexNode();        
         
         static int generateIndex(IndexHeader,unsigned int, int, int);   
-        static int writeIndex(const char*);
-        static int readIndex(const char*);
+        static int writeIndex(char*);
+        static int readIndex(char*);
         static int getIndexHeader(unsigned int, IndexHeader*);
+        static int getHeaderIndexCount();
         static void printIndex();
 };
 

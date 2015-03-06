@@ -76,27 +76,24 @@ int DeDup::deDuplicateSubBlocks(char* buffer, int curPointer, int inc, long unsi
         return 0;//TODO: return Error cases
 } 
 
-void DeDup::deDuplicate(char fileName[]) {
+void DeDup::deDuplicate(char *buffer, char *outBuffer, unsigned long int seg_s ) {
     
-    char * buffer;
+    
     unsigned int blockCounter = 1;
     bool exists = false;    
     const int inc = BLOCK_S / BLOCK_X;
     int bufferSize = 0;
+    unsigned long int segLength = seg_s;
+    unsigned long int curPointer = 0;
+    unsigned int indexOffset = 0;
+    unsigned long int fileSize = 0;
     
-    std::ifstream file (fileName, std::ifstream::binary);
     std::ofstream ofile ("dedup.tmp", std::ofstream::binary);
-    if (file) {
-        buffer = new char[SEG_S];
-        file.read(buffer, SEG_S); 
-        unsigned long int segLength = file.gcount();
-        //const unsigned long int SEG = segLength;
-        unsigned long int curPointer = 0;
+    if (ofile) {
         
         while(segLength > 0) {
             
             if(BLOCK_S < segLength) {
-                //std::cout<<"Buffer offset: "<<bufferSize<<" "<<curPointer<<" "<<segLength<<std::endl;
                 if(!exists) {
                     bufferSize = deDuplicateSubBlocks(buffer, curPointer, inc, &segLength);
                     if(bufferSize) {
@@ -108,16 +105,13 @@ void DeDup::deDuplicate(char fileName[]) {
                         bufferSize = 0;
                     }
                     node = Index(curPointer, (buffer + curPointer), BLOCK_S);
-                    //std::cout<<"BC I:"<<std::get<1>(node.getNode()).offsetPointer<<std::endl;
-                } else {
+                    } else {
                     node.rehashNode((buffer + curPointer), BLOCK_S);
                 }
                 std::unordered_map<std::string,IndexNode>::const_iterator tempNode;
-                //std::cout<<std::get<0>(node.getNode())<<" BC:"<<blockCounter<<std::endl;
                 if(nodeExists(std::get<0>(node.getNode()))) {
                     tempNode = strgIndex.find (std::get<0>(node.getNode()));
                     node.setParent(tempNode->second.offsetPointer, tempNode->second.size);
-                    //std::cout<<"BC I:"<<std::get<1>(node.getNode()).offsetPointer<<" "<<segLength<<std::endl;
                     curPointer += BLOCK_S;
                     segLength -= BLOCK_S;
                     exists = true;
@@ -146,8 +140,6 @@ void DeDup::deDuplicate(char fileName[]) {
                         Index::generateIndex(node.getParentIndex(),node.getIndexNode().offsetPointer, 1, 0);
                         
                         exists = false;
-                        //curPointer += BLOCK_S;
-                        //segLength -= BLOCK_S;
                      }
                  }            
                      
@@ -162,9 +154,14 @@ void DeDup::deDuplicate(char fileName[]) {
         }
      
         delete[] buffer;
-        file.close();
         ofile.close();
-        Index::writeIndex("index");
+       /* indexOffset = Index::writeIndex(outBuffer);
+        std::ifstream file ("dedup.tmp", std::ifstream::ate |std::ifstream::binary);
+        fileSize = file.tellg();
+        file.close();
+        file.open("dedup.tmp", std::ifstream::binary);
+        file.read((outBuffer + indexOffset), fileSize);    
+        file.close();        */
     }
 }
 
@@ -178,7 +175,7 @@ void DeDup::duplicate(char fileName[]) {
     file.open("dedup.tmp", std::ifstream::binary);
     std::ofstream ofile (fileName, std::ofstream::binary);
     if (file) {
-        Index::readIndex("index");
+        //Index::readIndex("index");
         buffer = new char[SEG_S];
         inBuffer = new char[fileSize];
         

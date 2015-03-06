@@ -98,28 +98,41 @@ int Index::generateIndex(IndexHeader node,unsigned int curBlock, int type, int b
     return 0;
 }
 
-int Index::writeIndex(const char* fileName) {
+int Index::writeIndex(char* index) {
     
-    std::ofstream ofile (fileName, std::ofstream::binary);
+    unsigned int offset = 0;
+    unsigned int size = 0;
+    unsigned short int intSize = sizeof(unsigned int);
     for(auto node:Index::headerIndex) {
-        ofile.write((char *)&node.second, sizeof(IndexHeader));
+        memcpy((index + offset + intSize), (char*)&node.second, sizeof(IndexHeader));
+        offset += sizeof(IndexHeader);
+        size++;
     }
-    ofile.close();
     
-    return 0;//TODO:Error cases to be included.
+    Index::headerIndex.clear();
+    memcpy((index), (char*)&size, sizeof(unsigned int));
+    //0: Error, nonzero: no Error
+    return (offset + intSize);
 }
 
-int Index::readIndex(const char* fileName) {
-    std::ifstream ifile (fileName, std::ofstream::binary);
+int Index::readIndex(char* index) {
+    
+    unsigned int offset = 0;
+    unsigned int index_s = 0;
+    unsigned int size = 0;
     IndexHeader node;
-    while(ifile) {
-        if(ifile.eof()) 
-            break;
-        ifile.read((char *)&node, sizeof(IndexHeader));
+    memcpy((char*)&index_s, index, sizeof(unsigned int));
+    offset = index_s ? sizeof(unsigned int) :  0;
+    size = index_s;
+    while(index_s) {
+        memcpy((char*)&node, (index + offset), sizeof(IndexHeader));
+        offset += sizeof(IndexHeader);
         Index::headerIndex.insert(std::pair<unsigned int, IndexHeader>(node.offsetPointer, node));
+        index_s--;
     }
-    ifile.close();
-    return 0;//TODO: Error cases to be included.
+    
+    //1: No error, 0: error
+    return ((offset / sizeof(IndexHeader)) == size);
 }
 
 int Index::getIndexHeader(unsigned int key, IndexHeader* node) {
@@ -130,6 +143,15 @@ int Index::getIndexHeader(unsigned int key, IndexHeader* node) {
         *node = got->second;
         return 1;
     }
+}
+
+int Index::getHeaderIndexCount() {
+    /*unsigned int count = 0;
+    for(auto node:Index::headerIndex) {
+        count++;
+    }*/
+   
+    return Index::headerIndex.size();//count;
 }
 
 void Index::printIndex() {

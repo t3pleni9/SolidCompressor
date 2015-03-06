@@ -74,8 +74,8 @@ class DeDup
     public:
         DeDup();
         virtual ~DeDup();
-        void deDuplicate(char*);
-        void static duplicate(char*);
+        void deDuplicate(char*, char *, unsigned long int);
+        void duplicate(char*);
     
     private:				
         typedef std::unordered_map<std::string, IndexNode> t_index;
