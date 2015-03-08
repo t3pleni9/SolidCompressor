@@ -29,11 +29,13 @@
 #include <stdlib.h>
 #include <librsync.h>
 
+
 class Delta
 {
     public:
         Delta();
         virtual ~Delta();
+        void doDiff(char *, char *, int);
     
     private:
         /* add your private declarations */

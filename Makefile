@@ -1,14 +1,14 @@
 IDIR = ./include
+LDIR = ./lib
+MKLDIR = mkdir -p $(LDIR)
 CC = gcc
 CXX = g++
 DBGFLAGS = -pg
-CFLAGS = -Wall -I$(IDIR)
+CFLAGS = -Wall -I$(IDIR) -L$(LDIR)
 CXXFLAGS = $(DBGFLAGS) $(CFLAGS) -std=c++11 
 
 ODIR = ./obj
 MKODIR = mkdir -p $(ODIR)
-LDIR = ./lib
-MKLDIR = mkdir -p $(LDIR)
 SDIR = ./src
 BINDIR = ./bin/
 MKBDIR = mkdir -p $(BINDIR) 
