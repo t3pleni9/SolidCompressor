@@ -76,6 +76,7 @@ class DeDup
         virtual ~DeDup();
         unsigned long int deDuplicate(char*, char *, unsigned long int);
         void duplicate(char*, char*);
+        void clearDictionary();
     
     private:				
         typedef std::unordered_map<std::string, IndexNode> t_index;

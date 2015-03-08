@@ -52,14 +52,14 @@ void Index::setParent(unsigned int pBlock, unsigned int pSize) {
 
 int Index::hashNode(unsigned int _l_index, char* block, unsigned int blockLen) {
     index.offsetPointer = _l_index;
-    index.size = 0;
+    index.node.size = 0;
     indexContext = Hash::getHash(block, (unsigned char*)hashValue, blockLen);
        
     return 1; //TODO: modify for errors
 }
 
 int Index::rehashNode(char* block, unsigned int blockLen) {
-    index.size++;
+    index.node.size++;
     indexContext = Hash::getNextHash(block, (unsigned char*)hashValue, blockLen, indexContext);
     
     return 1; //TODO: modify for errors
@@ -108,7 +108,7 @@ int Index::writeIndex(char* index) {
         offset += sizeof(IndexHeader);
         size++;
     }
-  
+    Index::headerIndex.clear();
     memcpy((index), (char*)&size, sizeof(unsigned int));
     //0: Error, nonzero: no Error
     return (offset + intSize);

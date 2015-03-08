@@ -52,6 +52,10 @@ bool DeDup::nodeExists(std::string hashValue) {
     return !(strgIndex.find (hashValue) == strgIndex.end());
 }
 
+void DeDup::clearDictionary() {
+    strgIndex.clear();
+}
+
 int DeDup::readBlock(std::fstream* file, char* block, int block_s, int offset) {
     return 0;
 }
@@ -104,14 +108,14 @@ unsigned long int DeDup::deDuplicate(char *buffer, char *outBuffer, unsigned lon
                         bufferSize = 0;
                     }
                     node = Index(curPointer, (buffer + curPointer), BLOCK_S);
-                    } else {
+                } else {
                     node.rehashNode((buffer + curPointer), BLOCK_S);
                 }
                 
                 std::unordered_map<std::string,IndexNode>::const_iterator tempNode;
                 if(nodeExists(std::get<0>(node.getNode()))) {
                     tempNode = strgIndex.find (std::get<0>(node.getNode()));
-                    node.setParent(tempNode->second.offsetPointer, tempNode->second.size);
+                    node.setParent(tempNode->second.offsetPointer, tempNode->second.node.size);
                     curPointer += BLOCK_S;
                     segLength -= BLOCK_S;
                     exists = true;
@@ -156,14 +160,19 @@ unsigned long int DeDup::deDuplicate(char *buffer, char *outBuffer, unsigned lon
         }
      
         delete[] buffer;
+       
         //Copying index into the buffer
-        indexOffset = Index::writeIndex(outBuffer);        
+        indexOffset = Index::writeIndex(outBuffer);   
+            
         //Copying size into the buffer
         memcpy((outBuffer + indexOffset), (char*)&fileSize, sizeof(unsigned long int));
         indexOffset += sizeof(unsigned long int);
+        
         //Copy compressed data into buffer
+        buffer = tempBuff;
         memcpy((outBuffer + indexOffset), tempBuff, fileSize);
-        delete tempBuff;
+        //std::cout<<strgIndex.size()<<" "<<indexOffset<<" "<<fileSize<<std::endl; 
+        delete[] tempBuff;
         return (fileSize + indexOffset); 
     }
     
@@ -178,7 +187,6 @@ void DeDup::duplicate(char *ddBuffer, char *buffer) {
     offset = Index::readIndex(ddBuffer);
     unsigned long int fileSize = 0;
     memcpy((char*)&fileSize, (ddBuffer + offset), sizeof(unsigned long int));
-    
     offset += sizeof(unsigned long int);    
     
     if (offset) {

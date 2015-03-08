@@ -25,6 +25,10 @@
 #ifndef DELTA_H
 #define DELTA_H
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <librsync.h>
+
 class Delta
 {
     public:

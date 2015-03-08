@@ -15,7 +15,7 @@ MKBDIR = mkdir -p $(BINDIR)
 
 
 
-LIBS = -lm -lcrypto
+LIBS = -lm -lcrypto -lrsync
 
 _DEPS = hash.h index.h dedup.h delta.h
 DEPS = $(patsubst %,$(IDIR)/%,$(_DEPS))
@@ -32,7 +32,7 @@ $(ODIR)/%.o: $(SDIR)/%.c $(DEPS)
 
 $(ODIR)/%.o: $(SDIR)/%.cpp $(DEPS)
 	$(MKODIR)
-	$(CXX) -c -o $@ $< $(CXXFLAGS)
+	$(CXX) -c -o $@ $< $(CXXFLAGS) 
 
 
 

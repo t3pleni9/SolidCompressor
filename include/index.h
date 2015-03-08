@@ -31,21 +31,25 @@
 #ifndef INDEX_H
 #define INDEX_H
 
-/**
- * @brief
- * Stores the index of block(s) on the file.
- */
+struct Node {
+    unsigned size : 5;
+    unsigned segment : 3;
+};
+
 struct IndexNode {
     unsigned int offsetPointer; /**< offset index */
-    unsigned int size; /**<  number of blocks*/
+    Node node; /**<  number of blocks*/
 };
 
 struct IndexHeader {
     unsigned int offsetPointer;
     unsigned int block;
     unsigned int size;
-    unsigned int type:2;    
+    unsigned int type : 2;    
 };
+
+
+
 class Index{
     
     private:
@@ -62,12 +66,13 @@ class Index{
         Index(unsigned int, char*, unsigned int);
         
         virtual ~Index();
+        
         IndexHeader getParentIndex();
+        IndexNode getIndexNode();   
+        std::pair<std::string, IndexNode> getNode();     
         int hashNode(unsigned int, char*, unsigned int);  
         int rehashNode(char*, unsigned int); 
-        std::pair<std::string, IndexNode> getNode();   
         void setParent(unsigned int, unsigned int);
-        IndexNode getIndexNode();        
         
         static int generateIndex(IndexHeader,unsigned int, int, int);   
         static int writeIndex(char*);
