@@ -22,12 +22,16 @@
  */
 
 
-#ifndef DELTA_H
-#define DELTA_H
+#ifndef DIFF_H
+#define DIFF_H
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <librsync.h>
+#include <assert.h>
+
+#include "membuf.h"
 
 
 
@@ -35,21 +39,9 @@
 extern "C" {
 #endif
 
-#define DEL_BLOCK 4000
-#define SIG_BLOCK RS_DEFAULT_BLOCK_LEN
-
-static size_t block_len = RS_DEFAULT_BLOCK_LEN;
-static size_t strong_len = RS_DEFAULT_STRONG_LEN;
-
-
-rs_result mem_diff(char *, char *, char *, int, int);
-rs_result mem_patch(char *, char *, char *,  int , int ); 
-rs_result rdiff_sig(char *, char *,  int);
-    
-    
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* DELTA_H */ 
+#endif /* MEMBUF_H */ 

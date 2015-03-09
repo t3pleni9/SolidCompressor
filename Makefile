@@ -17,18 +17,16 @@ MKBDIR = mkdir -p $(BINDIR)
 
 LIBS = -lm -lcrypto -lrsync
 
-_DEPS = hash.h index.h dedup.h delta.h
+_DEPS = hash.h index.h dedup.h membuf.h
 DEPS = $(patsubst %,$(IDIR)/%,$(_DEPS))
 
-_OBJ = hash.o index.o dedup.o delta.o
+_OBJ = hash.o index.o dedup.o membuf.o diff.o
 OBJ = $(patsubst %,$(ODIR)/%,$(_OBJ))
 
-_SRCXX = hash.cpp index.cpp dedup.cpp delta.cpp
-SRCXX = $(patsubst %,$(SDIR)/%,$(_SRCXX))
 
-$(ODIR)/%.o: $(SDIR)/%.c $(DEPS)
+$(ODIR)/%.o: $(SDIR)/%.c  $(DEPS)
 	$(MKODIR)
-	$(CC) -c -o $@ $< $(CFLAGS)
+	$(CXX) -c -o $@ $< $(CFLAGS)
 
 $(ODIR)/%.o: $(SDIR)/%.cpp $(DEPS)
 	$(MKODIR)
