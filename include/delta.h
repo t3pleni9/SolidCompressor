@@ -30,15 +30,26 @@
 #include <librsync.h>
 
 
-class Delta
-{
-    public:
-        Delta();
-        virtual ~Delta();
-        void doDiff(char *, char *, int);
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#define DEL_BLOCK 4000
+#define SIG_BLOCK RS_DEFAULT_BLOCK_LEN
+
+static size_t block_len = RS_DEFAULT_BLOCK_LEN;
+static size_t strong_len = RS_DEFAULT_STRONG_LEN;
+
+
+rs_result mem_diff(char *, char *, char *, int, int);
+rs_result mem_patch(char *, char *, char *,  int , int ); 
+rs_result rdiff_sig(char *, char *,  int);
     
-    private:
-        /* add your private declarations */
-};
+    
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* DELTA_H */ 
