@@ -28,26 +28,10 @@
 #include <unordered_map>
 #include <map>
 
+#include "index_struct.h"
+
 #ifndef INDEX_H
 #define INDEX_H
-
-struct Node {
-    unsigned size : 5;
-    unsigned segment : 3;
-};
-
-struct IndexNode {
-    unsigned int offsetPointer; /**< offset index */
-    Node node; /**<  number of blocks*/
-};
-
-struct IndexHeader {
-    unsigned int offsetPointer;
-    unsigned int block;
-    unsigned int size;
-    unsigned int type : 2;    
-};
-
 
 
 class Index{

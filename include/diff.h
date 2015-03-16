@@ -40,6 +40,17 @@ extern "C" {
 #endif
 
 
+
+typedef enum{
+    DIFF_DONE = 1,
+    DIFF_NOT_DONE = 2,
+    DIFF_OTHER_ERROR = 3
+} diff_result;
+
+diff_result do_diff(char *, char *, size_t, size_t *);
+        
+
+
 #ifdef __cplusplus
 }
 #endif

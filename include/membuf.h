@@ -37,34 +37,36 @@
 extern "C" {
 #endif
 
-#define DEL_BLOCK RS_DEFAULT_BLOCK_LEN
-#define SIG_BLOCK RS_DEFAULT_BLOCK_LEN
+#define DEL_BLOCK 200
+#define SIG_BLOCK 2000
 
 struct mem_buf {
-    char *memBuf;
+    char *mem_in_buf;
+    char *mem_out_buf;
     char *buf;
     size_t buf_len;
+    size_t mem_in_buf_len;
+    size_t mem_out_buf_len;
 };
 
 typedef struct mem_buf mem_buf_t;
 
 
-static size_t block_len = RS_DEFAULT_BLOCK_LEN;
-static size_t strong_len = RS_DEFAULT_STRONG_LEN;
+//static size_t block_len = DEL_BLOCK;
+//static size_t strong_len = RS_DEFAULT_STRONG_LEN;
 
 mem_buf_t *mem_buf_new(size_t);
 void mem_buf_free(mem_buf_t *);
 
-rs_result mem_diff(char *, char *, char *, int, int);
-rs_result mem_patch(char *, char *, char *,  int , int ); 
-rs_result mem_sig(char *, char *,  int , int , rs_stats_t *);
+rs_result mem_patch(char *, char *, char *, rs_stats_t *, size_t, size_t , size_t *);
+rs_result mem_sig(char *, char *,  int , size_t *, rs_stats_t *);
 rs_result mem_fill(rs_job_t *, rs_buffers_t *, void *);
 rs_result mem_drain(rs_job_t *, rs_buffers_t *, void *);
 rs_result mem_loadsig(char *, rs_signature_t **, rs_stats_t *, size_t);
-rs_result mem_delta(rs_signature_t *, char *, char *, rs_stats_t *, size_t , size_t);
+rs_result mem_delta(rs_signature_t *, char *, char *, rs_stats_t *, size_t , size_t *);
 //int delta(char *, char *, char *)
 
-rs_result mem_run(rs_job_t *, char *, char *, size_t, size_t);    
+rs_result mem_run(rs_job_t *, char *, char *, size_t, size_t*);    
     
 
 #ifdef __cplusplus

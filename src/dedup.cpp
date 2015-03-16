@@ -92,6 +92,10 @@ unsigned long int DeDup::deDuplicate(char *buffer, char *outBuffer, unsigned lon
     unsigned long int indexOffset = 0;
     unsigned long int fileSize = 0;
     
+   /* if(strgIndex.size() > BLOCK_N) {
+        clearDictionary();
+    }*/
+    
     if (tempBuff) {        
         while(segLength > 0) {
             

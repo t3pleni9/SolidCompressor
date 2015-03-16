@@ -42,7 +42,7 @@
  * @brief 
  * Block Size
  **/
-#define BLOCK_S 4000
+#define BLOCK_S 64
 
 /**
  * @brief 
@@ -77,6 +77,7 @@ class DeDup
         unsigned long int deDuplicate(char*, char *, unsigned long int);
         void duplicate(char*, char*);
         void clearDictionary();
+        
     
     private:				
         typedef std::unordered_map<std::string, IndexNode> t_index;
