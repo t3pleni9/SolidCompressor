@@ -24,14 +24,18 @@
 //TODO:Include index in the deduplicated file.
 
 
-#include "dedup.h"
-#include "index.h"
+#include <stdio.h>
+#include <openssl/sha.h>
+#include <cstring>
 #include <unordered_map>
 
 #include <fstream>
 #include <iostream>
 #include <stdio.h>
 #include <assert.h>
+
+#include "index.h"
+#include "dedup.h"
 
 
 DeDup::DeDup()
@@ -163,8 +167,7 @@ unsigned long int DeDup::deDuplicate(char *buffer, char *outBuffer, unsigned lon
             blockCounter++;
         }
      
-        delete[] buffer;
-       
+            
         //Copying index into the buffer
         indexOffset = Index::writeIndex(outBuffer);   
             
@@ -173,7 +176,6 @@ unsigned long int DeDup::deDuplicate(char *buffer, char *outBuffer, unsigned lon
         indexOffset += sizeof(unsigned long int);
         
         //Copy compressed data into buffer
-        buffer = tempBuff;
         memcpy((outBuffer + indexOffset), tempBuff, fileSize);
         //std::cout<<strgIndex.size()<<" "<<indexOffset<<" "<<fileSize<<std::endl; 
         delete[] tempBuff;

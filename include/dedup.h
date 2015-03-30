@@ -23,10 +23,7 @@
 
 
 
-#include <stdio.h>
-#include <openssl/sha.h>
-#include <cstring>
-#include <unordered_map>
+
 
 #include "index.h"
 
@@ -68,6 +65,7 @@
  * Block hash with the index header. 
  */
 
+#ifdef  __cplusplus
 
 class DeDup
 {
@@ -89,5 +87,8 @@ class DeDup
         int readBlock(std::fstream*, char*, int, int);
         
 };
+
+#endif
+
 
 #endif /* DEDUP_H */ 

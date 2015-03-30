@@ -21,18 +21,14 @@
  * 
  */
 
-#include <string>
-#include <cstring>
-#include <stdio.h>
 #include <openssl/sha.h>
-#include <unordered_map>
-#include <map>
 
 #include "index_struct.h"
 
 #ifndef INDEX_H
 #define INDEX_H
 
+#ifdef __cplusplus
 
 class Index{
     
@@ -65,5 +61,22 @@ class Index{
         static int getHeaderIndexCount();
         static void printIndex();
 };
+
+#endif
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+int generateIndex(IndexHeader,unsigned int, int, int);   
+int writeIndex(char*);
+int readIndex(char*);
+int getIndexHeader(unsigned int, IndexHeader*);
+int getHeaderIndexCount();
+void printIndex();
+
+#ifdef __cplusplus
+}
+#endif
+
 
 #endif /* INDEX_H */ 

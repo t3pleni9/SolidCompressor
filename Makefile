@@ -1,11 +1,12 @@
 IDIR = ./include
 LDIR = ./lib
-MKLDIR = mkdir -p $(LDIR)
+SLDIR = ./slib
+MKSLDIR = mkdir -p $(SLDIR)
 CC = gcc
 CXX = g++
 DBGFLAGS = -pg
-CFLAGS = -Wall -I$(IDIR) -L$(LDIR)
-CXXFLAGS = $(DBGFLAGS) $(CFLAGS) -std=c++11 
+CFLAGS = -fPIC -Wall -I$(IDIR) -L$(LDIR)
+CXXFLAGS = $(DBGFLAGS) $(CFLAGS) -std=c++11 -fPIC
 
 ODIR = ./obj
 MKODIR = mkdir -p $(ODIR)
@@ -15,33 +16,38 @@ MKBDIR = mkdir -p $(BINDIR)
 
 
 
-LIBS = -lm -lcrypto -lrsync
+LIBS = -lsolidComp -lm -lcrypto -lrsync -lzd
 
-_DEPS = hash.h index.h dedup.h membuf.h
+_DEPS = hash.h index.h dedup.h membuf.h deduplib.h
 DEPS = $(patsubst %,$(IDIR)/%,$(_DEPS))
 
-_OBJ = hash.o index.o dedup.o membuf.o diff.o
+_OBJ = hash.o index.o dedup.o membuf.o diff.o deduplib.o
 OBJ = $(patsubst %,$(ODIR)/%,$(_OBJ))
 
 
 $(ODIR)/%.o: $(SDIR)/%.c  $(DEPS)
 	$(MKODIR)
-	$(CXX) -c -o $@ $< $(CFLAGS)
+	$(CC) -c -o $@ $< $(CFLAGS)
 
 $(ODIR)/%.o: $(SDIR)/%.cpp $(DEPS)
 	$(MKODIR)
 	$(CXX) -c -o $@ $< $(CXXFLAGS) 
 
-
-
-test: $(OBJ)
+install: lib
 	$(MKBDIR)
-	$(CXX) main.cpp -o $(BINDIR)main $^ $(CXXFLAGS) $(LIBS)
+	$(CC) main.c -Wl,-R$(SLDIR) -L$(SLDIR) -o $(BINDIR)main $(CFLAGS) $(LIBS) 
+
+lib: $(OBJ)
+	$(MKSLDIR)
+	$(CXX) -shared -Wl,-soname,libsolidComp.so.1 -o $(SLDIR)/libsolidComp.so.1 $^ -lc
+	cd $(SLDIR); \
+	ln -s  libsolidComp.so.1 libsolidComp.so
+
 
 $(_OBJ): $(OBJ)	
 
 .PHONY: clean
 
 clean:
-	rm -rf $(ODIR) $(BINDIR)
+	rm -rf $(ODIR) $(BINDIR) $(SLDIR)
 	rm -f *~ $(INCDIR)/*~ *.tmp temp *.out index

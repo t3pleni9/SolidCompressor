@@ -24,21 +24,30 @@
 #ifndef INDEX_STRUCT_H
 #define INDEX_STRUCT_H
 
-struct Node {
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+typedef struct Node {
     unsigned size : 5;
     unsigned segment : 3;
-};
+} Node;
 
-struct IndexNode {
+typedef struct IndexNode {
     unsigned int offsetPointer; /**< offset index */
     Node node; /**<  number of blocks*/
-};
+} IndexNode;
 
-struct IndexHeader {
+typedef struct IndexHeader {
     unsigned int offsetPointer;
     unsigned int block;
     unsigned int size;
     unsigned int type : 2;    
-};
+} IndexHeader;
+
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

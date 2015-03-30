@@ -22,7 +22,7 @@
  */
  
 #include <openssl/sha.h>
-#include <cstring>
+
 
 #ifndef HASH_H
 #define HASH_H
