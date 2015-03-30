@@ -1,6 +1,12 @@
 
-#include <openssl/sha.h>
 #include "index_struct.h"
+#include "index.h"
+#include "dedup.h"
+#include "hash.h"
+
+#ifndef DEDUPLIB_H
+#define DEDUPLIB_H
+
 
 //-lsolidComp
 #ifdef __cplusplus
@@ -28,4 +34,6 @@ void printIndex();
 
 #ifdef __cplusplus
 }
+#endif
+
 #endif

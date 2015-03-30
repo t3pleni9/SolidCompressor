@@ -9,8 +9,7 @@
 #include <assert.h>
 
 
-#include "dedup.h"
-#include "hash.h"
+
 
 #include "deduplib.h"
 

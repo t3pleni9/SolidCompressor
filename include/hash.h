@@ -27,6 +27,8 @@
 #ifndef HASH_H
 #define HASH_H
 
+#ifdef  __cplusplus
+
 class Hash
 {
     public:
@@ -38,5 +40,7 @@ class Hash
         static SHA_CTX getHash(char*, unsigned char*, unsigned int, SHA_CTX);   
 
 };
+
+#endif
 
 #endif /* HASH_H */ 

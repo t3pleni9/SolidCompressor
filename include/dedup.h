@@ -23,8 +23,7 @@
 
 
 
-
-
+#include <openssl/sha.h>
 #include "index.h"
 
 #ifndef DEDUP_H
