@@ -31,7 +31,7 @@
 #include <assert.h>
 
 
-#include "zdlib.h"
+#include <zdlib.h>
 
 #ifdef __cplusplus
 extern "C" {
