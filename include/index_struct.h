@@ -28,9 +28,16 @@
 extern "C" {
 #endif
 
-typedef struct Node {
+typedef struct _node_{
+    char * node;
+    int node_len;
+    struct _node_ *next;
+} _node_t;
+
+
+typedef struct {
     unsigned size : 5;
-    unsigned segment : 3;
+    //unsigned segment : 3;
 } Node;
 
 typedef struct IndexNode {

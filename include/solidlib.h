@@ -1,5 +1,6 @@
+
 /*
- * delta.h
+ * deduplib.h
  * 
  * Copyright 2015 Justin Jose <justinjose999@gmail.com>
  * 
@@ -21,17 +22,12 @@
  * 
  */
 
+#include "index_struct.h"
+#include <openssl/sha.h>
 
-#ifndef DIFF_H
-#define DIFF_H
+#ifndef DEDUPLIB_H
+#define DEDUPLIB_H
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <assert.h>
-
-
-#include "zdlib.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -47,11 +43,30 @@ typedef enum{
     PATCH_ERROR = 6
 } diff_result;
 
+typedef void* _DeDup;
+
+_DeDup newDeDup();
+void delDeDup(_DeDup deDup);
+unsigned long int deDuplicate(_DeDup deDup, char *buffer, char *outBuffer, unsigned long int seg_s);
+void duplicate(_DeDup deDup, char *ddBuffer, char *buffer);
+void clearDictionary(_DeDup deDup);
+
+SHA_CTX getHash(char* block, unsigned char* digest, unsigned int blockLen);
+SHA_CTX getNextHash(char* block, unsigned char* digest, unsigned int blockLen, SHA_CTX context);
+ 
+int generateIndex(IndexHeader node,unsigned int curBlock, int type, int buffer);   
+int writeIndex(char* index);
+int readIndex(char* index);
+int getIndexHeader(unsigned int key, IndexHeader* node);
+int getHeaderIndexCount();
+void printIndex();
+
 diff_result do_diff(char *inBuffer, char *baseBuffer, char **deltaBuffer, size_t inLen, size_t baseLen, size_t *outLen);
 diff_result do_patch(char *deltaBuffer, char *baseBuffer, char **patchBuffer, size_t deltaLen, size_t baseLen, size_t *patchLen);
+
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* DIFF_H */ 
+#endif

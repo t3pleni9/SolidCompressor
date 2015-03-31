@@ -6,7 +6,7 @@ CC = gcc
 CXX = g++
 DBGFLAGS = -pg
 CFLAGS = -fPIC -Wall -I$(IDIR) -L$(LDIR)
-CXXFLAGS = $(DBGFLAGS) $(CFLAGS) -std=c++11 -fPIC
+CXXFLAGS = $(DBGFLAGS) $(CFLAGS) -std=c++11
 
 ODIR = ./obj
 MKODIR = mkdir -p $(ODIR)
@@ -18,10 +18,10 @@ MKBDIR = mkdir -p $(BINDIR)
 
 LIBS = -lsolidComp -lm -lcrypto -lrsync -lzd
 
-_DEPS = hash.h index.h dedup.h membuf.h deduplib.h
+_DEPS = hash.h index.h dedup.h diff.h solidlib.h
 DEPS = $(patsubst %,$(IDIR)/%,$(_DEPS))
 
-_OBJ = hash.o index.o dedup.o membuf.o diff.o deduplib.o
+_OBJ = hash.o index.o dedup.o diff.o deduplib.o
 OBJ = $(patsubst %,$(ODIR)/%,$(_OBJ))
 
 
@@ -37,11 +37,13 @@ install: lib
 	$(MKBDIR)
 	$(CC) main.c -Wl,-R$(SLDIR) -L$(SLDIR) -o $(BINDIR)main $(CFLAGS) $(LIBS) 
 
-lib: $(OBJ)
+lib: library
+
+library: $(OBJ)
 	$(MKSLDIR)
 	$(CXX) -shared -Wl,-soname,libsolidComp.so.1 -o $(SLDIR)/libsolidComp.so.1 $^ -lc
 	cd $(SLDIR); \
-	ln -s  libsolidComp.so.1 libsolidComp.so
+	ln -sf  libsolidComp.so.1 libsolidComp.so
 
 
 $(_OBJ): $(OBJ)	
