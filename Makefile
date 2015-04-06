@@ -16,7 +16,7 @@ MKBDIR = mkdir -p $(BINDIR)
 
 
 
-LIBS = -lsolidComp -lm -lcrypto -lrsync -lzd
+LIBS = -lsolidComp -lm -lcrypto -lrsync -lzd -lfuzzy
 
 _DEPS = hash.h index.h dedup.h diff.h solidlib.h
 DEPS = $(patsubst %,$(IDIR)/%,$(_DEPS))

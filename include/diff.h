@@ -29,25 +29,47 @@
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
-
-
+#include <fuzzy.h>
 #include <zdlib.h>
+
+#include "index_struct.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+typedef struct{
+    unsigned int bit:1;
+} bit_feild;
+
 typedef enum{
     DIFF_DONE = 1,
     DIFF_NOT_DONE = 2,
-    DIFF_ERROR = 3,
+    DIFF_NULL_POINTER = 3,
+    DIFF_ERROR = 4,
     
-    PATCH_DONE = 4,
-    PATCH_NOT_DONE = 5,
-    PATCH_ERROR = 6
+    PATCH_DONE = 5,
+    PATCH_NOT_DONE = 6,
+    PATCH_ERROR = 7
 } diff_result;
 
-diff_result do_diff(char *inBuffer, char *baseBuffer, char **deltaBuffer, size_t inLen, size_t baseLen, size_t *outLen);
+typedef enum {
+    EQUAL = 0,
+    FIRST = 1,
+    SECND = 2,
+    NFSBL = 3, 
+    ERROR = 4
+} comp_result;
+
+char errorMsg[100];
+
+#define MAX_DIFF 1000000
+#define DIFF_BLOCK 1000
+#define DIFF_THLD 30
+#define MAX_INT 2000000
+typedef unsigned long uLong;
+
+diff_result do_diff(const unsigned char *inBuffer, unsigned char **outBuffer, size_t inLen, size_t *outLen);
 diff_result do_patch(char *deltaBuffer, char *baseBuffer, char **patchBuffer, size_t deltaLen, size_t baseLen, size_t *patchLen);
 
 #ifdef __cplusplus

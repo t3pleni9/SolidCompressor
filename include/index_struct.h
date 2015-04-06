@@ -52,6 +52,8 @@ typedef struct IndexHeader {
     unsigned int type : 2;    
 } IndexHeader;
 
+#define TRUE 1
+#define FALSE 0
 
 #ifdef __cplusplus
 }

@@ -32,16 +32,17 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-
+/*
 typedef enum{
     DIFF_DONE = 1,
     DIFF_NOT_DONE = 2,
-    DIFF_ERROR = 3,
+    DIFF_NULL_POINTER = 3,
+    DIFF_ERROR = 4,
     
-    PATCH_DONE = 4,
-    PATCH_NOT_DONE = 5,
-    PATCH_ERROR = 6
-} diff_result;
+    PATCH_DONE = 5,
+    PATCH_NOT_DONE = 6,
+    PATCH_ERROR = 7
+} diff_result;*/
 
 typedef void* _DeDup;
 
@@ -61,8 +62,8 @@ int getIndexHeader(unsigned int key, IndexHeader* node);
 int getHeaderIndexCount();
 void printIndex();
 
-diff_result do_diff(char *inBuffer, char *baseBuffer, char **deltaBuffer, size_t inLen, size_t baseLen, size_t *outLen);
-diff_result do_patch(char *deltaBuffer, char *baseBuffer, char **patchBuffer, size_t deltaLen, size_t baseLen, size_t *patchLen);
+//diff_result do_diff(char *inBuffer, char *baseBuffer, char **deltaBuffer, size_t inLen, size_t baseLen, size_t *outLen);
+//diff_result do_patch(char *deltaBuffer, char *baseBuffer, char **patchBuffer, size_t deltaLen, size_t baseLen, size_t *patchLen);
 
 
 #ifdef __cplusplus
