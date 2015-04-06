@@ -44,6 +44,8 @@ typedef enum{
     PATCH_ERROR = 7
 } diff_result;*/
 
+#define SEG_S 200000000
+
 typedef void* _DeDup;
 
 _DeDup newDeDup();
