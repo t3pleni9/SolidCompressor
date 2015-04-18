@@ -21,15 +21,25 @@
  * 
  */
 
-#include <string>
-#include <cstring>
-#include <stdio.h>
-#include <openssl/sha.h>
-#include <unordered_map>
-#include <map>
 
 #ifndef INDEX_H
 #define INDEX_H
+
+#include <stdio.h>
+#include <openssl/sha.h>
+
+#ifdef __cplusplus
+
+#include <string>
+#include <cstring>
+#include <unordered_map>
+#include <map>
+
+#endif
+
+#ifdef __cplusplus
+extern "C" {
+
 
 struct Node {
     unsigned size : 5;
@@ -49,6 +59,11 @@ struct IndexHeader {
 };
 
 
+typedef struct Node Node;
+typedef struct IndexNode IndexNode;
+typedef struct IndexHeader IndexHeader;
+
+}
 
 class Index{
     
@@ -81,5 +96,7 @@ class Index{
         static int getHeaderIndexCount();
         static void printIndex();
 };
+
+#endif
 
 #endif /* INDEX_H */ 

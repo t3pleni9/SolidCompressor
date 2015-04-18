@@ -28,14 +28,14 @@
 #include "solidlib.h"
 
 solid_result de_dup(SOLID_DATA buffer) {
-        DeDup deDup;
-        char * buffer1;
-        char * outBuffer = new char[2*SEG_S];
-        char * tempBuffer; 
-        //std::ifstream file ("/home/justin/temp4", std::ifstream::binary);
-        buffer1 = new char[SEG_S];
-        //file.read(buffer, SEG_S);
-        size_t outLen = 0;
-        unsigned long int fileSize = deDup.deDuplicate(buffer1, outBuffer, SEG_S);
-        //std::cout<<fileSize<<std::endl;
+    DeDup deDup;
+    buffer->out_len = deDup.deDuplicate(buffer->in_buffer, buffer->out_buffer, SEG_S);
+    if(!buffer->out_buffer) {
+        return SDEDUP_NULL_POINTER;
+    } else if(!buffer->out_len) {
+        return SDEDUP_NOT_DONE;
+    }
+    
+    return SDEDUP_DONE;
 }
+

@@ -27,8 +27,8 @@ int main(int argc, char **argv) {
             ofile.write(tempBuffer, outLen);
         }
         ofile.close();
-        file.close();
-        return 1;*/
+        file.close();*/
+        return 1;
              
         
 }

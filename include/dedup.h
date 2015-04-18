@@ -67,7 +67,7 @@
  * @brief 
  * Block hash with the index header. 
  */
-
+#ifdef __cplusplus
 
 class DeDup
 {
@@ -88,5 +88,7 @@ class DeDup
         int readBlock(std::fstream*, char*, int, int);
         
 };
+
+#endif
 
 #endif /* DEDUP_H */ 

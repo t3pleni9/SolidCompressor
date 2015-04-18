@@ -21,11 +21,17 @@
  * 
  */
  
-#include <openssl/sha.h>
-#include <cstring>
 
 #ifndef HASH_H
 #define HASH_H
+ 
+#include <openssl/sha.h>
+
+
+#ifdef __cplusplus
+
+#include <cstring>
+
 
 class Hash
 {
@@ -38,5 +44,7 @@ class Hash
         static SHA_CTX getHash(char*, unsigned char*, unsigned int, SHA_CTX);   
 
 };
+
+#endif
 
 #endif /* HASH_H */ 
