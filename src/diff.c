@@ -86,7 +86,7 @@ diff_result do_diff(char *inBuffer, char *outBuffer, size_t inLen, size_t *outLe
                 if(!done[j])
                     continue;
                 int sim = 0;
-                _do_diff((inBuffer + j*DIFF_BLOCK), (inBuffer + i*DIFF_BLOCK), &delta, DIFF_BLOCK, DIFF_BLOCK, &deltaLen);
+                _do_diff((const unsigned char *)(inBuffer + j*DIFF_BLOCK), (const unsigned char *)(inBuffer + i*DIFF_BLOCK), &delta, DIFF_BLOCK, DIFF_BLOCK, &deltaLen);
                
                 sim = (1 - ((float)deltaLen / DIFF_BLOCK)) * 100;
                 if( sim > DIFF_THLD) {
@@ -94,7 +94,7 @@ diff_result do_diff(char *inBuffer, char *outBuffer, size_t inLen, size_t *outLe
                     memcpy((outBuffer + blockCounter), delta, deltaLen);
                     
                     if(!delta) {
-                        printf("delta not set");
+                        strcpy(errorMsg,"delta not set");
                         return DIFF_NOT_DONE;
                     }
                     

@@ -1,6 +1,6 @@
 
 /*
- * deduplib.h
+ * solidlib.h
  * 
  * Copyright 2015 Justin Jose <justinjose999@gmail.com>
  * 
@@ -34,18 +34,20 @@ extern "C" {
 
 typedef enum {
     SDEDUP_DONE = 101,
-    SDEDUP_NOT_DONE = 102,
+    SDEDUP_ERROR = 102,
     SDEDUP_NULL_POINTER = 103,
-    SDEDUP_ERROR = 104,
+    
     SDIFF_DONE = 201,
-    SDIFF_NOT_DONE = 202,
+    SDIFF_ERROR = 202,
     SDIFF_NULL_POINTER = 203,
-    SDIFF_ERROR = 204,
+    
+    SSTRM_DONE = 301,
+    SSTRM_ERROR = 302,
+    SSTRM_NULL_POINTER = 303,
     
     SDUP_DONE = 105,
-    SDUP_NOT_DONE = 106,
+    SDUP_ERROR = 106,
     SDUP_NULL_POINTER = 107,
-    SDUP_ERROR = 108,
     
     SPATCH_DONE = 205,
     SPATCH_NOT_DONE = 206,
@@ -57,11 +59,12 @@ typedef struct {
     char *out_buffer; // NULL buffer
     size_t in_len;
     size_t out_len;     
+    int busy:1;
 }t_solid_data;
 
 typedef t_solid_data* SOLID_DATA;
 
-extern char errorMsg[100];
+extern char* errorMsg;
 
 #ifndef SEG_S
 #define SEG_S 200000000

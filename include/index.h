@@ -39,7 +39,7 @@
 
 #ifdef __cplusplus
 extern "C" {
-
+#endif
 
 struct Node {
     unsigned size : 5;
@@ -63,6 +63,7 @@ typedef struct Node Node;
 typedef struct IndexNode IndexNode;
 typedef struct IndexHeader IndexHeader;
 
+#ifdef __cplusplus
 }
 
 class Index{

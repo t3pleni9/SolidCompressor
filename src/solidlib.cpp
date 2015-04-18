@@ -29,13 +29,48 @@
 
 solid_result de_dup(SOLID_DATA buffer) {
     DeDup deDup;
+    buffer->busy = 1;
     buffer->out_len = deDup.deDuplicate(buffer->in_buffer, buffer->out_buffer, SEG_S);
+    buffer->busy = 0;
     if(!buffer->out_buffer) {
         return SDEDUP_NULL_POINTER;
     } else if(!buffer->out_len) {
-        return SDEDUP_NOT_DONE;
+        return SDEDUP_ERROR;
     }
     
     return SDEDUP_DONE;
+}
+
+solid_result diff(SOLID_DATA buffer) {
+    buffer->busy = 1;
+    diff_result diff = do_diff(buffer->in_buffer, buffer->out_buffer, buffer->in_len, &buffer->out_len);
+    buffer->busy = 0;
+    if(diff == DIFF_DONE) {
+        return SDIFF_DONE;
+    } else if(diff == DIFF_NULL_POINTER){
+        return SDIFF_NULL_POINTER;
+    } else {
+        perror(errorMsg);
+        return SDIFF_ERROR;
+    }
+}
+
+solid_result stream_compress(SOLID_DATA buffer) {
+    return SSTRM_DONE;
+}
+
+solid_result solid_compress(char* inbuffer, char *outbuffer, size_t in_len, size_t * out_len) {
+    t_solid_data buffer;
+    buffer.in_buffer = inbuffer; 
+    buffer.out_buffer = outbuffer; // NULL buffer
+    buffer.in_len = in_len;
+    buffer.busy = 0;
+    
+    if(de_dup(&buffer) == SDEDUP_DONE) {
+        memcpy(buffer.in_buffer, buffer.out_buffer, buffer.out_len);
+        return diff(&buffer);
+    } else {
+        return SDEDUP_ERROR;
+    }
 }
 
