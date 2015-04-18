@@ -23,6 +23,7 @@
  
 #include "diff.h"
 
+char errorMsg[100];
 
 static diff_result _do_diff(const unsigned char *inBuffer, const unsigned char *baseBuffer, char **deltaBuffer,size_t inLen, size_t baseLen, size_t *outLen) {
 
@@ -42,7 +43,7 @@ static diff_result _do_diff(const unsigned char *inBuffer, const unsigned char *
     return DIFF_DONE;
 }
 
-diff_result do_patch(char *deltaBuffer, char *baseBuffer, char **patchBuffer,size_t deltaLen, size_t baseLen, size_t *patchLen) {
+diff_result do_patch(char *deltaBuffer, char *baseBuffer, char **patchBuffer, size_t deltaLen, size_t baseLen, size_t *patchLen) {
     
     Bytef *tar = NULL;
     uLong t_size = 0;
@@ -60,12 +61,12 @@ diff_result do_patch(char *deltaBuffer, char *baseBuffer, char **patchBuffer,siz
     return PATCH_DONE;
 }
 
-diff_result do_diff(const unsigned char *inBuffer, unsigned char **outBuffer, size_t inLen, size_t *outLen) {
+diff_result do_diff(char *inBuffer, char *outBuffer, size_t inLen, size_t *outLen) {
         unsigned int blockCount = inLen / DIFF_BLOCK, i, j;
         char *delta;
         size_t deltaLen = 0;
         if(outLen) {
-            outLen = 0;
+            *outLen = 0;
         } else {
             perror("Out length not declared");
             return DIFF_NULL_POINTER;
@@ -75,25 +76,38 @@ diff_result do_diff(const unsigned char *inBuffer, unsigned char **outBuffer, si
         for(i = 0; i < blockCount ; i++) {
             done[i] = 1;
         }
+        unsigned int blockCounter = 0;
         for(i = 0; i < blockCount; i++) {
             if(!done[i])
                 continue;
+            memcpy((outBuffer + blockCounter), (inBuffer + i*DIFF_BLOCK), DIFF_BLOCK);
+            blockCounter+= DIFF_BLOCK;
             for(j = i+1; j < blockCount ; j++) {
                 if(!done[j])
                     continue;
                 int sim = 0;
                 _do_diff((inBuffer + j*DIFF_BLOCK), (inBuffer + i*DIFF_BLOCK), &delta, DIFF_BLOCK, DIFF_BLOCK, &deltaLen);
+               
                 sim = (1 - ((float)deltaLen / DIFF_BLOCK)) * 100;
                 if( sim > DIFF_THLD) {
-                    printf("%d %d \n", deltaLen, DIFF_BLOCK);
+                    
+                    memcpy((outBuffer + blockCounter), delta, deltaLen);
+                    
+                    if(!delta) {
+                        printf("delta not set");
+                        return DIFF_NOT_DONE;
+                    }
+                    
+                    blockCounter += deltaLen;
+                        
                     done[j] = 0;
                     
                 } else {
-                    printf("%d Sim \n", sim);
+                    
                 }
             }
         }
 
-        
+        *outLen = blockCounter;
         return DIFF_DONE;        
 }

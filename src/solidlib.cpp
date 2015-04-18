@@ -1,5 +1,5 @@
 /*
- * index_struct.h
+ * solidlib.cpp
  * 
  * Copyright 2015 Justin Jose <justinjose999@gmail.com>
  * 
@@ -21,42 +21,21 @@
  * 
  */
 
-#ifndef INDEX_STRUCT_H
-#define INDEX_STRUCT_H
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+#include "dedup.h"
+#include "diff.h"
 
-typedef struct _node_{
-    char * node;
-    int node_len;
-    struct _node_ *next;
-} _node_t;
+#include "solidlib.h"
 
-
-typedef struct Node {
-    unsigned size : 5;
-    //unsigned segment : 3;
-} Node;
-
-typedef struct IndexNode {
-    unsigned int offsetPointer; /**< offset index */
-    Node node; /**<  number of blocks*/
-} IndexNode;
-
-typedef struct IndexHeader {
-    unsigned int offsetPointer;
-    unsigned int block;
-    unsigned int size;
-    unsigned int type : 2;    
-} IndexHeader;
-
-#define TRUE 1
-#define FALSE 0
-
-#ifdef __cplusplus
+solid_result de_dup(SOLID_DATA buffer) {
+        DeDup deDup;
+        char * buffer1;
+        char * outBuffer = new char[2*SEG_S];
+        char * tempBuffer; 
+        //std::ifstream file ("/home/justin/temp4", std::ifstream::binary);
+        buffer1 = new char[SEG_S];
+        //file.read(buffer, SEG_S);
+        size_t outLen = 0;
+        unsigned long int fileSize = deDup.deDuplicate(buffer1, outBuffer, SEG_S);
+        //std::cout<<fileSize<<std::endl;
 }
-#endif
-
-#endif

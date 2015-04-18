@@ -22,8 +22,12 @@
  */
 
 
-
+#include <string>
+#include <cstring>
+#include <stdio.h>
 #include <openssl/sha.h>
+#include <unordered_map>
+
 #include "index.h"
 
 #ifndef DEDUP_H
@@ -38,7 +42,7 @@
  * @brief 
  * Block Size
  **/
-#define BLOCK_S 64
+#define BLOCK_S 4000
 
 /**
  * @brief 
@@ -64,7 +68,6 @@
  * Block hash with the index header. 
  */
 
-#ifdef  __cplusplus
 
 class DeDup
 {
@@ -74,7 +77,6 @@ class DeDup
         unsigned long int deDuplicate(char*, char *, unsigned long int);
         void duplicate(char*, char*);
         void clearDictionary();
-        
     
     private:				
         typedef std::unordered_map<std::string, IndexNode> t_index;
@@ -86,8 +88,5 @@ class DeDup
         int readBlock(std::fstream*, char*, int, int);
         
 };
-
-#endif
-
 
 #endif /* DEDUP_H */ 

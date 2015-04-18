@@ -22,22 +22,12 @@
  */
 
 
-
-#include <string>
-#include <cstring>
-#include <stdio.h>
-
-#include <unordered_map>
-#include <map>
+#include "index.h"
+#include "hash.h"
 
 #include <iostream>
 #include <assert.h>
 #include <fstream>
-
-#include "index.h"
-#include "hash.h"
-
-#ifdef __cplusplus
 
 Index::t_index Index::headerIndex = t_index();
 
@@ -168,4 +158,3 @@ void Index::printIndex() {
         std::cout << " " << it.first << " " << it.second.block<<" " << it.second.size<<" " << it.second.type<< std::endl;
 }
 
-#endif

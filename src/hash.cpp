@@ -20,7 +20,7 @@
  * 
  * 
  */
-#include <cstring>
+
 
 #include "hash.h"
 

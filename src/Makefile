@@ -24,11 +24,8 @@ DEPS = $(patsubst %,$(IDIR)/%,$(_DEPS))
 _OBJ = hash.o index.o dedup.o 
 OBJ = $(patsubst %,$(ODIR)/%,$(_OBJ))
 
-_SRCXX = hash.cpp index.cpp dedup.cpp
+_SRCXX = hash.cpp index.cpp dedup.cpp delta.cpp
 SRCXX = $(patsubst %,$(SDIR)/%,$(_SRCXX))
-
-_SRCC = delta.c
-SRCC = $(patsubst %,$(SDIR)/%,$(_SRCC))
 
 $(ODIR)/%.o: $(SDIR)/%.c $(DEPS)
 	$(MKODIR)

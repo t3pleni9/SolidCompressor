@@ -29,10 +29,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
-#include <fuzzy.h>
 #include <zdlib.h>
 
-#include "index_struct.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -41,6 +39,12 @@ extern "C" {
 typedef struct{
     unsigned int bit:1;
 } bit_feild;
+
+typedef struct _node_{
+    char * node;
+    int node_len;
+    struct _node_ *next;
+} _node_t;
 
 typedef enum{
     DIFF_DONE = 1,
@@ -61,15 +65,15 @@ typedef enum {
     ERROR = 4
 } comp_result;
 
-char errorMsg[100];
+
 
 #define MAX_DIFF 1000000
 #define DIFF_BLOCK 1000
-#define DIFF_THLD 30
+#define DIFF_THLD 5
 #define MAX_INT 2000000
 typedef unsigned long uLong;
 
-diff_result do_diff(const unsigned char *inBuffer, unsigned char **outBuffer, size_t inLen, size_t *outLen);
+diff_result do_diff(char *inBuffer, char *outBuffer, size_t inLen, size_t *outLen);
 diff_result do_patch(char *deltaBuffer, char *baseBuffer, char **patchBuffer, size_t deltaLen, size_t baseLen, size_t *patchLen);
 
 #ifdef __cplusplus
