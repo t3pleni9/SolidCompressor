@@ -6,28 +6,19 @@
 
 int main(int argc, char **argv) {
         
-        /*DeDup deDup;
-        char * buffer;
-        char * outBuffer = new char[2*SEG_S];
-        char * tempBuffer; 
-        std::ifstream file ("/home/justin/temp4", std::ifstream::binary);
-        buffer = new char[SEG_S];
-        file.read(buffer, SEG_S);
-        size_t outLen = 0;
-        unsigned long int fileSize = deDup.deDuplicate(buffer, outBuffer, SEG_S);
-        std::cout<<fileSize<<std::endl;
+      FILE *inFile;
+        char *buffer = (char*)malloc(SEG_S *sizeof(char));
+        char *outBuffer = (char*)malloc(2*SEG_S *sizeof(char));
         
-        tempBuffer = new char[fileSize+1];
-            if(do_diff(outBuffer, tempBuffer, fileSize, &outLen) != DIFF_DONE) {
-                printf("%s",errorMsg);
-            }
-        printf("%d\n", outLen);
-        std::ofstream ofile ("dedup1.tmp", std::ofstream::binary);       
-        if(fileSize) {
-            ofile.write(tempBuffer, outLen);
+        size_t outLen = 0;
+        inFile = fopen("/home/justin/temp4", "rb");
+        if(inFile) {
+            fread(buffer, SEG_S *sizeof(unsigned char), 1, inFile);
+            solid_compress(buffer, outBuffer, SEG_S, &outLen);
+            printf("%d", outLen);
+            
         }
-        ofile.close();
-        file.close();*/
+        fclose(inFile);
         return 1;
              
         

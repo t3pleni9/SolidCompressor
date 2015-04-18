@@ -65,10 +65,22 @@ solid_result solid_compress(char* inbuffer, char *outbuffer, size_t in_len, size
     buffer.out_buffer = outbuffer; // NULL buffer
     buffer.in_len = in_len;
     buffer.busy = 0;
+    t_solid_data diff_buffer;
     
     if(de_dup(&buffer) == SDEDUP_DONE) {
-        memcpy(buffer.in_buffer, buffer.out_buffer, buffer.out_len);
-        return diff(&buffer);
+        if(buffer.out_len) 
+        printf("Done dedup %d %d\n", buffer.in_len,buffer.out_len);
+        else 
+        printf("out len is null\n");
+        diff_buffer.in_buffer = buffer.out_buffer;
+        diff_buffer.out_buffer = outbuffer;
+        diff_buffer.in_len = buffer.out_len;
+        diff_buffer.busy = 0;
+       // memcpy(buffer.in_buffer, buffer.out_buffer, buffer.out_len);
+        printf("memcopy is the culprit\n");
+        solid_result result = diff(&diff_buffer);
+        *out_len = diff_buffer.out_len;
+        return result;
     } else {
         return SDEDUP_ERROR;
     }
