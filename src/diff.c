@@ -25,6 +25,49 @@
 
 char errorMsg[100];
 
+static int flatten_node_buffer(_node_t node, char **node_buffer) {
+    *node_buffer = (char *)malloc(node.node_size + sizeof(int) + sizeof(size_t));
+    
+    if(!*node_buffer)
+        return -1;
+    int offset = 0;
+
+    if(memcpy((*node_buffer + offset), (char *)&node.ref_node, sizeof(node.ref_node)) == NULL) {
+        return -1;
+    }
+   
+    offset += sizeof(node.ref_node);
+    if(memcpy((*node_buffer + offset), (char *)&node.node_size, sizeof(node.node_size)) == NULL) {
+        return -1;
+    }
+    
+    offset += sizeof(node.node_size);
+    if(memcpy((*node_buffer + offset), node.data, node.node_size) == NULL) {
+        return -1;
+    }
+    
+    offset += node.node_size;
+    
+    return offset;    
+}
+
+static int create_delta_buffer(NODEDP nodes, size_t block_count, char *out_buffer) {
+    int i, node_len, offset = 0;
+    char *node_buffer = NULL;
+    //printf("%d\n", block_count);
+    for(i = 0; i< block_count; i++) {
+        if((node_len = flatten_node_buffer(*(nodes[i]), &node_buffer)) != -1) {                
+            memcpy((out_buffer + offset), node_buffer, node_len);
+            offset += node_len;              
+            free(node_buffer);
+            //printf("here %d %d %d\n", i, block_count, offset);
+        } else {
+            return 0;
+        }
+    }
+    return 1;
+}
+
 static diff_result _do_diff(const unsigned char *inBuffer, const unsigned char *baseBuffer, char **deltaBuffer,size_t inLen, size_t baseLen, size_t *outLen) {
 
     Bytef *delta = NULL;
@@ -60,29 +103,47 @@ diff_result do_patch(char *deltaBuffer, char *baseBuffer, char **patchBuffer, si
     
     return PATCH_DONE;
 }
+/* 
+ * TODO: Do something about the last block 
+ */
 
-diff_result do_diff(char *inBuffer, char *outBuffer, size_t inLen, size_t *outLen) {
+diff_result do_diff(char *inBuffer, char **outBuffer, size_t inLen, size_t *out_len) {
+        time_t t;
+        srand((unsigned) time(&t));
         unsigned int blockCount = inLen / DIFF_BLOCK, i, j;
         char *delta;
+        NODEDP node_array;
+
         size_t deltaLen = 0;
-        if(outLen) {
-            *outLen = 0;
+        if(out_len) {
+            *out_len = 0;
         } else {
             perror("Out length not declared");
             return DIFF_NULL_POINTER;
         }
         
         char *done = (char *)malloc(blockCount * sizeof(char));
+        node_array = (NODEDP)malloc(((inLen > blockCount * DIFF_BLOCK)?blockCount + 1 : blockCount) * sizeof(NODESP));
         for(i = 0; i < blockCount ; i++) {
             done[i] = 1;
+            node_array[i] = NULL;
         }
+       
         unsigned int blockCounter = 0;
         for(i = 0; i < blockCount; i++) {
+            
             if(!done[i])
                 continue;
-            memcpy((outBuffer + blockCounter), (inBuffer + i*DIFF_BLOCK), DIFF_BLOCK);
+            fprintf(stderr,"i = %d %d\n", i, blockCount);
+            node_array[i] = (NODESP)malloc(sizeof(_node_t));
+            node_array[i]->ref_node = -1;
+            node_array[i]->node_size = DIFF_BLOCK;
+            node_array[i]->data = (char *)malloc(DIFF_BLOCK * sizeof(char));
+            *out_len += (node_array[i]->node_size + sizeof(int) + sizeof(size_t));
+            memcpy(node_array[i]->data, (inBuffer + i*DIFF_BLOCK), DIFF_BLOCK);
             blockCounter+= DIFF_BLOCK;
-            for(j = i+1; j < blockCount ; j++) {
+            int inc = (rand() % 9) + 2;
+            for(j = i+1; j < blockCount ; j*=inc) {
                 if(!done[j])
                     continue;
                 int sim = 0;
@@ -90,16 +151,19 @@ diff_result do_diff(char *inBuffer, char *outBuffer, size_t inLen, size_t *outLe
                
                 sim = (1 - ((float)deltaLen / DIFF_BLOCK)) * 100;
                 if( sim > DIFF_THLD) {
-                    
-                    memcpy((outBuffer + blockCounter), delta, deltaLen);
-                    
+                    node_array[j] = (NODESP)malloc(sizeof(_node_t));
+                    node_array[j]->ref_node = i;
+                    node_array[j]->node_size = deltaLen;
+                    node_array[j]->data = (char *)malloc(deltaLen * sizeof(char));
+                    *out_len += (node_array[j]->node_size + sizeof(int) + sizeof(size_t));
+                    memcpy(node_array[j]->data, delta, deltaLen);
+                     
                     if(!delta) {
                         strcpy(errorMsg,"delta not set");
                         return DIFF_NOT_DONE;
                     }
                     
-                    blockCounter += deltaLen;
-                        
+                    blockCounter += deltaLen;                        
                     done[j] = 0;
                     
                 } else {
@@ -107,7 +171,18 @@ diff_result do_diff(char *inBuffer, char *outBuffer, size_t inLen, size_t *outLe
                 }
             }
         }
-
-        *outLen = blockCounter;
+        
+        if(inLen > blockCount * DIFF_BLOCK) {
+            node_array[i] = (NODESP)malloc(sizeof(_node_t));
+            node_array[i]->ref_node = -1;
+            node_array[i]->node_size = DIFF_BLOCK;
+            node_array[i]->data = (char *)malloc(DIFF_BLOCK * sizeof(char));
+            *out_len += (node_array[i]->node_size + sizeof(int) + sizeof(size_t));
+            memcpy(node_array[i]->data, (inBuffer + i*DIFF_BLOCK), inLen - blockCount * DIFF_BLOCK);
+            blockCount++;
+        }
+        
+        *outBuffer = (char *)malloc(*out_len * sizeof(char));
+        create_delta_buffer(node_array, blockCount, *outBuffer);
         return DIFF_DONE;        
 }

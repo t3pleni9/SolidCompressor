@@ -54,7 +54,7 @@
  * @brief 
  * Segment Size
  **/
-#define SEG_S 200000000
+#define SEG_S 400000000
 
 /**
  * @brief 

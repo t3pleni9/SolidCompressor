@@ -30,6 +30,7 @@
 #include <string.h>
 #include <assert.h>
 #include <zdlib.h>
+#include <time.h>
 
 
 #ifdef __cplusplus
@@ -41,10 +42,14 @@ typedef struct{
 } bit_feild;
 
 typedef struct _node_{
-    char * node;
-    int node_len;
-    struct _node_ *next;
+    char * data;
+    int ref_node;
+    size_t node_size;
 } _node_t;
+
+typedef _node_t* NODESP;
+typedef NODESP* NODEDP;
+
 
 typedef enum{
     DIFF_DONE = 1,
@@ -68,12 +73,15 @@ typedef enum {
 
 
 #define MAX_DIFF 1000000
-#define DIFF_BLOCK 1000
-#define DIFF_THLD 5
+#define DIFF_BLOCK 1000000 // 100 K
+#define DIFF_THLD 75
 #define MAX_INT 2000000
 typedef unsigned long uLong;
 
-diff_result do_diff(char *inBuffer, char *outBuffer, size_t inLen, size_t *outLen);
+/* 
+ * TODO: Use ssdeep to check for similarity
+ */
+diff_result do_diff(char *inBuffer, char **outBuffer, size_t inLen, size_t *outLen); 
 diff_result do_patch(char *deltaBuffer, char *baseBuffer, char **patchBuffer, size_t deltaLen, size_t baseLen, size_t *patchLen);
 
 #ifdef __cplusplus

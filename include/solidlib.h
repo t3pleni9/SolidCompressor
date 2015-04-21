@@ -67,7 +67,11 @@ typedef t_solid_data* SOLID_DATA;
 extern char* errorMsg;
 
 #ifndef SEG_S
-#define SEG_S 200000000
+#define SEG_S 400000000
+#endif
+
+#ifndef CHUNK
+#define CHUNK 40000
 #endif
 
 solid_result de_dup(SOLID_DATA buffer);
