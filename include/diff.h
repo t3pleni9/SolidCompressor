@@ -30,6 +30,7 @@
 #include <string.h>
 #include <assert.h>
 #include <zdlib.h>
+#include <fuzzy.h>
 #include <time.h>
 
 
