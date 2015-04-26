@@ -44,6 +44,7 @@ typedef struct{
 
 typedef struct _node_{
     char * data;
+    char * fuzzy_hash_result;
     int ref_node;
     size_t node_size;
 } _node_t;
@@ -71,11 +72,11 @@ typedef enum {
     ERROR = 4
 } comp_result;
 
-
+//90409028 90388295 90319955
 
 #define MAX_DIFF 1000000
 #define DIFF_BLOCK 1000000 // 100 K
-#define DIFF_THLD 75
+#define DIFF_THLD 10
 #define MAX_INT 2000000
 typedef unsigned long uLong;
 
