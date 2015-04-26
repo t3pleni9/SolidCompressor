@@ -32,6 +32,8 @@
 #include <zdlib.h>
 #include <fuzzy.h>
 #include <time.h>
+#include <errno.h>
+#include <unistd.h>
 
 
 #ifdef __cplusplus
@@ -84,6 +86,7 @@ typedef unsigned long uLong;
  * TODO: Use ssdeep to check for similarity
  */
 diff_result do_diff(char *inBuffer, char **outBuffer, size_t inLen, size_t *outLen); 
+diff_result do_diff_fd(char *inBuffer, int out_fd, size_t inLen, size_t *out_len);
 diff_result do_patch(char *deltaBuffer, char *baseBuffer, char **patchBuffer, size_t deltaLen, size_t baseLen, size_t *patchLen);
 
 #ifdef __cplusplus

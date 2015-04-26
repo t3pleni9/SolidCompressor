@@ -46,7 +46,12 @@ solid_result de_dup(SOLID_DATA buffer) {
 
 solid_result diff(SOLID_DATA buffer) {
     buffer->busy = 1;
-    diff_result diff = do_diff(buffer->in_buffer, &buffer->out_buffer, buffer->in_len, &buffer->out_len);
+    diff_result diff;
+    if(buffer->fd.out != -1) {
+        diff = do_diff_fd(buffer->in_buffer, buffer->fd.out, buffer->in_len, &buffer->out_len);
+    } else {
+        diff = do_diff(buffer->in_buffer, &buffer->out_buffer, buffer->in_len, &buffer->out_len);
+    }
     buffer->busy = 0;
     if(diff == DIFF_DONE) {
         return SDIFF_DONE;
@@ -123,6 +128,7 @@ solid_result solid_compress(char* inbuffer, char *outbuffer, size_t in_len, size
     buffer.out_buffer = outbuffer; // NULL buffer
     buffer.in_len = in_len;
     buffer.busy = 0;
+    int pipefd[2] = {-1, -1};
     t_solid_data diff_buffer, strm_buffer;
     if(de_dup(&buffer) == SDEDUP_DONE) {
         if(buffer.out_len) 
@@ -133,15 +139,25 @@ solid_result solid_compress(char* inbuffer, char *outbuffer, size_t in_len, size
         diff_buffer.out_buffer = NULL;
         diff_buffer.in_len = buffer.out_len;
         diff_buffer.busy = 0;
+        diff_buffer.fd.in = -1;
+        diff_buffer.fd.out = -1;
        // memcpy(buffer.in_buffer, buffer.out_buffer, buffer.out_len);
-       
+        int ret = pipe(pipefd);
+        if (ret < 0) {
+            ret = -errno;
+            fprintf(stderr, "ERROR: pipe failed. %s\n", strerror(-ret));
+            exit(-ret);
+        }
+        
+        diff_buffer.fd.out = pipefd[1];
+
         solid_result result = diff(&diff_buffer);
         printf("Diff done %d %d\n", diff_buffer.in_len, diff_buffer.out_len);
-        strm_buffer.in_buffer = diff_buffer.out_buffer;
+        /*strm_buffer.in_buffer = diff_buffer.out_buffer;
         strm_buffer.out_buffer = outbuffer;
         strm_buffer.in_len = diff_buffer.out_len;
         strm_buffer.busy = 0;
-        result = stream_compress(&strm_buffer);
+        result = stream_compress(&strm_buffer);*/
         memcpy(outbuffer, strm_buffer.out_buffer, strm_buffer.out_len);
         *out_len = strm_buffer.out_len;
         return result;

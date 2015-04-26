@@ -131,7 +131,7 @@ unsigned long int DeDup::deDuplicate(char *buffer, char *outBuffer, unsigned lon
                         curPointer += BLOCK_S;
                         segLength -= BLOCK_S;
                                 
-                        if(BLOCK_S < segLength) {
+                        if(BLOCK_S <= segLength) {
                             node.rehashNode((buffer + curPointer), BLOCK_S);  
                             assert ( !nodeExists(std::get<0>(node.getNode())) );                            
                             strgIndex.insert(node.getNode());                            
@@ -160,20 +160,28 @@ unsigned long int DeDup::deDuplicate(char *buffer, char *outBuffer, unsigned lon
         }
      
         delete[] buffer;
-       
+        indexOffset = 0;
+        char c = 0;
+        c = (fileSize >= seg_s ? 0:1);
+        memcpy((outBuffer + indexOffset), (char*)&(c), sizeof(c));
+        indexOffset += sizeof(c);
+        
+         //Copying index into the buffer
+        if(c) {
+            indexOffset += Index::writeIndex(outBuffer); 
+        }    
         //Copying index into the buffer
-        indexOffset = Index::writeIndex(outBuffer);   
+          
             
         //Copying size into the buffer
         memcpy((outBuffer + indexOffset), (char*)&fileSize, sizeof(unsigned long int));
         indexOffset += sizeof(unsigned long int);
         
         //Copy compressed data into buffer
-        buffer = tempBuff;
         memcpy((outBuffer + indexOffset), tempBuff, fileSize);
         //std::cout<<strgIndex.size()<<" "<<indexOffset<<" "<<fileSize<<std::endl; 
         delete[] tempBuff;
-        return (fileSize + indexOffset); 
+        return ((c?fileSize:seg_s) + indexOffset); 
     }
     
     return 0;
@@ -183,13 +191,26 @@ void DeDup::duplicate(char *ddBuffer, char *buffer) {
     
     char *inBuffer;
     Index temp;
-    unsigned int offset;
-    offset = Index::readIndex(ddBuffer);
+    unsigned int offset = 0;
+    char isC = 0;
+    memcpy((char*)&isC, (ddBuffer + offset), sizeof(isC));
+    offset += sizeof(isC);
+    if(isC) {
+        offset += Index::readIndex(ddBuffer);
+    }
+    
     unsigned long int fileSize = 0;
+    
     memcpy((char*)&fileSize, (ddBuffer + offset), sizeof(unsigned long int));
     offset += sizeof(unsigned long int);    
     
     if (offset) {
+        
+        if(!isC) {
+            memcpy(buffer, (ddBuffer + offset), fileSize); 
+            return;
+        }
+            
                 
         inBuffer = new char[fileSize];
         

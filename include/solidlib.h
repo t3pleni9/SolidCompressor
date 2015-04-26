@@ -27,6 +27,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -55,8 +56,14 @@ typedef enum {
 } solid_result;
 
 typedef struct {
+    int in;
+    int out;
+} file_d;
+
+typedef struct {
     char *in_buffer; 
     char *out_buffer; // NULL buffer
+    file_d fd;
     size_t in_len;
     size_t out_len;     
     int busy:1;
@@ -67,7 +74,7 @@ typedef t_solid_data* SOLID_DATA;
 extern char* errorMsg;
 
 #ifndef SEG_S
-#define SEG_S 400000000
+#define SEG_S 200000000
 #endif
 
 #ifndef CHUNK

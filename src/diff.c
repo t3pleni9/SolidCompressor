@@ -25,13 +25,31 @@
 
 char errorMsg[100];
 
-static void free_node(NODESP node) {
-    if(node->data) {
-        free(node->data);
-    printf("clearing done data\n");
-    }if(node->fuzzy_hash_result){
-        free(node->fuzzy_hash_result);
-    printf("clearing done hash\n");}
+int write_buf(int fd, const void *buf, int size)
+{
+	int ret;
+	int pos = 0;
+
+	while (pos < size) {
+		ret = write(fd, (char*)buf + pos, size - pos);
+		if (ret < 0) {
+			ret = -errno;
+			fprintf(stderr, "ERROR: failed to dump stream. %s",
+					strerror(-ret));
+			goto out;
+		}
+		if (!ret) {
+			ret = -EIO;
+			fprintf(stderr, "ERROR: failed to dump stream. %s",
+					strerror(-ret));
+			goto out;
+		}
+		pos += ret;
+	}
+	ret = 0;
+
+out:
+	return ret;
 }
 
 static int flatten_node_buffer(_node_t node, char **node_buffer) {
@@ -119,7 +137,6 @@ diff_result do_diff(char *inBuffer, char **outBuffer, size_t inLen, size_t *out_
         time_t t;
         srand((unsigned) time(&t));
         unsigned int blockCount = inLen / DIFF_BLOCK, i, j;
-        char *delta;
         NODEDP node_array;
 
         size_t deltaLen = 0;
@@ -157,16 +174,13 @@ diff_result do_diff(char *inBuffer, char **outBuffer, size_t inLen, size_t *out_
                 int sim = 0;
                 sim = fuzzy_compare(node_array[i]->fuzzy_hash_result,node_array[j]->fuzzy_hash_result);
                 if( sim >= DIFF_THLD) {
-                    
-                     _do_diff((const unsigned char *)(inBuffer + j*DIFF_BLOCK), (const unsigned char *)(inBuffer + i*DIFF_BLOCK), &delta, DIFF_BLOCK, DIFF_BLOCK, &deltaLen);               
                     node_array[j] = (NODESP)malloc(sizeof(_node_t));
+                    _do_diff((const unsigned char *)(inBuffer + j*DIFF_BLOCK), (const unsigned char *)(inBuffer + i*DIFF_BLOCK), &node_array[j]->data, DIFF_BLOCK, DIFF_BLOCK, &node_array[j]->node_size);               
+                    
                     node_array[j]->ref_node = i;
-                    node_array[j]->node_size = deltaLen;
-                    node_array[j]->data = (char *)malloc(deltaLen * sizeof(char));
                     *out_len += (node_array[j]->node_size + sizeof(int) + sizeof(size_t));
-                    memcpy(node_array[j]->data, delta, deltaLen);
-                     
-                    if(!delta) {
+                    
+                    if(!node_array[j]->data) {
                         strcpy(errorMsg,"delta not set");
                         return DIFF_NOT_DONE;
                     }
@@ -201,5 +215,106 @@ diff_result do_diff(char *inBuffer, char **outBuffer, size_t inLen, size_t *out_
         }
         
         free(node_array);
+        return DIFF_DONE;        
+}
+
+
+diff_result do_diff_fd(char *inBuffer, int out_fd, size_t inLen, size_t *out_len) {
+        time_t t;
+        srand((unsigned) time(&t));
+        unsigned int blockCount = inLen / DIFF_BLOCK, i, j;
+        char **fuzzy_hash_result;
+        _node_t node_array;
+        int ret = 0, node_len;
+        char *node_buffer = NULL;
+        
+        if(out_len) {
+            *out_len = 0;
+        } else {
+            perror("Out length not declared");
+            return DIFF_NULL_POINTER;
+        }
+        
+        char *done = (char *)malloc(blockCount * sizeof(char));
+        fuzzy_hash_result = (char **)malloc(((inLen > blockCount * DIFF_BLOCK)?
+            blockCount + 1 : blockCount) * sizeof(char *));
+        for(i = 0; i < blockCount ; i++) {
+            done[i] = 1;
+            fuzzy_hash_result[i] = (char *)malloc(FUZZY_MAX_RESULT);
+            fuzzy_hash_buf((const unsigned char *)(inBuffer + i*DIFF_BLOCK), DIFF_BLOCK, fuzzy_hash_result[i]);
+        }
+       
+        for(i = 0; i < blockCount; i++) {     
+            
+            if(!done[i])
+                continue;
+            node_array.ref_node = -1;
+            node_array.node_size = DIFF_BLOCK;
+            node_array.data = (char *)malloc(DIFF_BLOCK * sizeof(char));
+            *out_len += (node_array.node_size + sizeof(int) + sizeof(size_t));
+            memcpy(node_array.data, (inBuffer + i*DIFF_BLOCK), DIFF_BLOCK);
+            if((node_len = flatten_node_buffer(node_array, &node_buffer)) != -1) {                
+                ret = write_buf(out_fd, node_buffer, node_len);
+                if (ret < 0) {
+                    exit(-ret);
+                }
+                
+                free(node_buffer);
+                free(node_array.data);
+            }
+            //int inc = (rand() % 9) + 2;
+            for(j = i+1; j < blockCount ; j++) {
+                if(!done[j])
+                    continue;
+                int sim = 0;
+                sim = fuzzy_compare(fuzzy_hash_result[i],fuzzy_hash_result[j]);
+                if( sim >= DIFF_THLD) {
+                    _do_diff((const unsigned char *)(inBuffer + j*DIFF_BLOCK), (const unsigned char *)(inBuffer + i*DIFF_BLOCK), &node_array.data, DIFF_BLOCK, DIFF_BLOCK, &node_array.node_size);               
+                    
+                    node_array.ref_node = i;
+                    *out_len += (node_array.node_size + sizeof(int) + sizeof(size_t));
+                    
+                    if(!node_array.data) {
+                        strcpy(errorMsg,"delta not set");
+                        return DIFF_NOT_DONE;
+                    }
+                    if((node_len = flatten_node_buffer(node_array, &node_buffer)) != -1) {                
+                        ret = write_buf(out_fd, node_buffer, node_len);
+                        if (ret < 0) {
+                            exit(-ret);
+                        }
+                        
+                        free(node_buffer);
+                        free(node_array.data);
+                    }
+                    
+                    done[j] = 0;     
+                    fprintf(stderr, "i = %d j = %d %d\n", i, j, blockCount);               
+                } else {
+                    
+                }
+            }
+            
+            free(fuzzy_hash_result[i]);
+        }
+        
+        if(inLen > blockCount * DIFF_BLOCK) {
+            node_array.ref_node = -1;
+            node_array.node_size = inLen - blockCount * DIFF_BLOCK;
+            node_array.data = (char *)malloc(DIFF_BLOCK * sizeof(char));
+            *out_len += (node_array.node_size + sizeof(int) + sizeof(size_t));
+            blockCount++;
+            if((node_len = flatten_node_buffer(node_array, &node_buffer)) != -1) {                
+                ret = write_buf(out_fd, node_buffer, node_len);
+                if (ret < 0) {
+                    exit(-ret);
+                }
+                              
+                free(node_buffer);
+                free(node_array.data);
+            }
+        }
+        
+        free(fuzzy_hash_result);
         return DIFF_DONE;        
 }
