@@ -144,7 +144,6 @@ diff_result do_diff(char *inBuffer, char **outBuffer, size_t inLen, size_t *out_
             
             if(!done[i])
                 continue;
-            fprintf(stderr,"i = %d %d\n", i, blockCount);
             node_array[i]->ref_node = -1;
             node_array[i]->node_size = DIFF_BLOCK;
             node_array[i]->data = (char *)malloc(DIFF_BLOCK * sizeof(char));
@@ -158,6 +157,7 @@ diff_result do_diff(char *inBuffer, char **outBuffer, size_t inLen, size_t *out_
                 int sim = 0;
                 sim = fuzzy_compare(node_array[i]->fuzzy_hash_result,node_array[j]->fuzzy_hash_result);
                 if( sim >= DIFF_THLD) {
+                    
                      _do_diff((const unsigned char *)(inBuffer + j*DIFF_BLOCK), (const unsigned char *)(inBuffer + i*DIFF_BLOCK), &delta, DIFF_BLOCK, DIFF_BLOCK, &deltaLen);               
                     node_array[j] = (NODESP)malloc(sizeof(_node_t));
                     node_array[j]->ref_node = i;
