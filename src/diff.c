@@ -157,6 +157,7 @@ diff_result do_diff(char *inBuffer, char **outBuffer, size_t inLen, size_t *out_
         }
        
         unsigned int blockCounter = 0;
+        int blah = 0;
         for(i = 0; i < blockCount; i++) {
             
             if(!done[i])
@@ -187,7 +188,7 @@ diff_result do_diff(char *inBuffer, char **outBuffer, size_t inLen, size_t *out_
                     
                     blockCounter += deltaLen;                        
                     done[j] = 0;
-                    
+                    blah++;
                 } else {
                     
                 }
@@ -195,7 +196,7 @@ diff_result do_diff(char *inBuffer, char **outBuffer, size_t inLen, size_t *out_
             
             free(node_array[i]->fuzzy_hash_result);
         }
-        
+        printf("%d\n", blah);
         if(inLen > blockCount * DIFF_BLOCK) {
             node_array[i] = (NODESP)malloc(sizeof(_node_t));
             node_array[i]->ref_node = -1;
@@ -256,7 +257,7 @@ diff_result do_diff_fd(char *inBuffer, int out_fd, size_t inLen, size_t *out_len
             if((node_len = flatten_node_buffer(node_array, &node_buffer)) != -1) {                
                 ret = write_buf(out_fd, node_buffer, node_len);
                 if (ret < 0) {
-                    exit(-ret);
+                    return DIFF_PIPE_ERROR;
                 }
                 
                 free(node_buffer);

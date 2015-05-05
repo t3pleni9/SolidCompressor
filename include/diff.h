@@ -56,6 +56,7 @@ typedef NODESP* NODEDP;
 
 
 typedef enum{
+    
     DIFF_DONE = 1,
     DIFF_NOT_DONE = 2,
     DIFF_NULL_POINTER = 3,
@@ -63,7 +64,10 @@ typedef enum{
     
     PATCH_DONE = 5,
     PATCH_NOT_DONE = 6,
-    PATCH_ERROR = 7
+    PATCH_ERROR = 7,
+    
+    DIFF_PIPE_ERROR = 8,
+    DIFF_PIPE_IO_NULL = 9
 } diff_result;
 
 typedef enum {
@@ -77,7 +81,7 @@ typedef enum {
 //90409028 90388295 90319955
 
 #define MAX_DIFF 1000000
-#define DIFF_BLOCK 1000000 // 100 K
+#define DIFF_BLOCK 10000 // find an algo to get the number of blocks in range of 101 to 999
 #define DIFF_THLD 10
 #define MAX_INT 2000000
 typedef unsigned long uLong;
@@ -89,6 +93,7 @@ diff_result do_diff(char *inBuffer, char **outBuffer, size_t inLen, size_t *outL
 diff_result do_diff_fd(char *inBuffer, int out_fd, size_t inLen, size_t *out_len);
 diff_result do_patch(char *deltaBuffer, char *baseBuffer, char **patchBuffer, size_t deltaLen, size_t baseLen, size_t *patchLen);
 
+int write_buf(int fd, const void *buf, int size);
 #ifdef __cplusplus
 }
 #endif

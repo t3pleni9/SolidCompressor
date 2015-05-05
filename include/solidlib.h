@@ -34,6 +34,14 @@ extern "C" {
 #endif
 
 typedef enum {
+    SPIPE_DONE = 1,
+    SPIPE_NOT_SET = 2,   
+    SPIPE_ERROR = 3,
+    SQU_DONE = 4,
+    SQU_ERROR = 5,
+    STH_ERROR = 6,
+    STH_DONE = 7,
+    
     SDEDUP_DONE = 101,
     SDEDUP_ERROR = 102,
     SDEDUP_NULL_POINTER = 103,
@@ -65,8 +73,7 @@ typedef struct {
     char *out_buffer; // NULL buffer
     file_d fd;
     size_t in_len;
-    size_t out_len;     
-    int busy:1;
+    size_t out_len;  
 }t_solid_data;
 
 typedef t_solid_data* SOLID_DATA;
@@ -90,8 +97,9 @@ solid_result diff(SOLID_DATA buffer);
 solid_result stream_compress(SOLID_DATA buffer);
 //solid_result stream_decomp(SOLID_DATA buffer);
 
+
 solid_result solid_compress(char* inbuffer, char *outbuffer, size_t in_len, size_t * out_len);
-solid_result solid_compress_file(FILE *in_file, FILE *out_file);
+solid_result solid_compress_fd(int in_fd, int dump_fd);
 
 
 
