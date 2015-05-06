@@ -152,7 +152,7 @@ solid_result stream_compress(SOLID_DATA buffer) {
             assert(ret != Z_STREAM_ERROR);  /* state not clobbered */
             have = CHUNK - strm.avail_out;
             if(buffer->fd.out != -1) {
-                int ret = write_buf(buffer->fd.out, out, have, "STRM 1");
+                int ret = write_buf(buffer->fd.out, out, have);
                 if (ret < 0) {
                     (void)deflateEnd(&strm);
                     return SPIPE_ERROR;                
@@ -300,15 +300,14 @@ void *diff_pipe(void *_args) {
 }
 
 solid_result solid_compress_fd(int in_fd, int dump_fd) {
-    SOLID_DATA de_dup_buffer, diff_buffer, strm_buffer;
+    SOLID_DATA de_dup_buffer, diff_buffer;
     de_dup_buffer = (SOLID_DATA)malloc(sizeof(t_solid_data));
     diff_buffer = (SOLID_DATA)malloc(sizeof(t_solid_data));
     
     int ret = 0;
     
-    void *t_err = NULL;
     solid_result retResult = SPIPE_DONE;
-    pthread_t t_diff, t_que, t_pipe;
+    pthread_t t_diff;
     int first_run = 1;
     
     while(1) {
@@ -435,7 +434,7 @@ solid_result solid_compress(char* inbuffer, char *outbuffer, size_t in_len, size
         diff_buffer.fd.out = -1;
        // memcpy(buffer.in_buffer, buffer.out_buffer, buffer.out_len);
         #ifdef _PTHREAD_H
-            pthread_t inc_x_thread;
+            //pthread_t inc_x_thread;
             printf("pthread area\n");
             int ret = pipe(pipefd);
             if (ret < 0) {

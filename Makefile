@@ -28,11 +28,11 @@ OBJ = $(patsubst %,$(ODIR)/%,$(_OBJ))
 
 $(ODIR)/%.o: $(SDIR)/%.c  $(DEPS)
 	$(MKODIR)
-	$(CC) -c -lc -o $@ $< $(CFLAGS)
+	$(CC) -c  -o $@ $< $(CFLAGS)
 
 $(ODIR)/%.o: $(SDIR)/%.cpp $(DEPS)
 	$(MKODIR)
-	$(CXX) -c -lc -o $@ $< $(CXXFLAGS) 
+	$(CXX) -c -o $@ $< $(CXXFLAGS) 
 
 install: lib
 	$(MKBDIR)

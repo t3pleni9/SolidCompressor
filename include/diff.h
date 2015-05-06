@@ -93,7 +93,7 @@ diff_result do_diff(char *inBuffer, char **outBuffer, size_t inLen, size_t *outL
 diff_result do_diff_fd(char *inBuffer, int out_fd, size_t inLen, size_t *out_len);
 diff_result do_patch(char *deltaBuffer, char *baseBuffer, char **patchBuffer, size_t deltaLen, size_t baseLen, size_t *patchLen);
 
-int write_buf(int fd, const void *buf, int size, char method[]);
+int write_buf(int fd, const void *buf, int size);
 #ifdef __cplusplus
 }
 #endif
