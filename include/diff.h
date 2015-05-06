@@ -81,7 +81,7 @@ typedef enum {
 //90409028 90388295 90319955
 
 #define MAX_DIFF 1000000
-#define DIFF_BLOCK 10000 // find an algo to get the number of blocks in range of 101 to 999
+#define DIFF_BLOCK 1000000 // find an algo to get the number of blocks in range of 101 to 999
 #define DIFF_THLD 10
 #define MAX_INT 2000000
 typedef unsigned long uLong;
@@ -93,7 +93,7 @@ diff_result do_diff(char *inBuffer, char **outBuffer, size_t inLen, size_t *outL
 diff_result do_diff_fd(char *inBuffer, int out_fd, size_t inLen, size_t *out_len);
 diff_result do_patch(char *deltaBuffer, char *baseBuffer, char **patchBuffer, size_t deltaLen, size_t baseLen, size_t *patchLen);
 
-int write_buf(int fd, const void *buf, int size);
+int write_buf(int fd, const void *buf, int size, char method[]);
 #ifdef __cplusplus
 }
 #endif

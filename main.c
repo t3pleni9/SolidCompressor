@@ -5,7 +5,8 @@
 
 
 int main(int argc, char **argv) {
-        
+        char mybuf[4096];
+    setvbuf(stdin, mybuf, _IOFBF, 4096);
       FILE *inFile, *outFile;
         /*char *buffer = (char*)malloc(SEG_S *sizeof(char));
         char *outBuffer = (char*)malloc(2*SEG_S *sizeof(char));

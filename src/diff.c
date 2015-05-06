@@ -25,7 +25,7 @@
 
 char errorMsg[100];
 
-int write_buf(int fd, const void *buf, int size)
+int write_buf(int fd, const void *buf, int size, char method[])
 {
 	int ret;
 	int pos = 0;
@@ -34,8 +34,8 @@ int write_buf(int fd, const void *buf, int size)
 		ret = write(fd, (char*)buf + pos, size - pos);
 		if (ret < 0) {
 			ret = -errno;
-			fprintf(stderr, "ERROR: failed to dump stream. %s",
-					strerror(-ret));
+			fprintf(stderr, "ERROR: failed to dump stream. %s %s",
+					strerror(-ret), method);
 			goto out;
 		}
 		if (!ret) {
@@ -255,7 +255,7 @@ diff_result do_diff_fd(char *inBuffer, int out_fd, size_t inLen, size_t *out_len
             *out_len += (node_array.node_size + sizeof(int) + sizeof(size_t));
             memcpy(node_array.data, (inBuffer + i*DIFF_BLOCK), DIFF_BLOCK);
             if((node_len = flatten_node_buffer(node_array, &node_buffer)) != -1) {                
-                ret = write_buf(out_fd, node_buffer, node_len);
+                ret = write_buf(out_fd, node_buffer, node_len, "DIFF1");
                 if (ret < 0) {
                     return DIFF_PIPE_ERROR;
                 }
@@ -280,7 +280,7 @@ diff_result do_diff_fd(char *inBuffer, int out_fd, size_t inLen, size_t *out_len
                         return DIFF_NOT_DONE;
                     }
                     if((node_len = flatten_node_buffer(node_array, &node_buffer)) != -1) {                
-                        ret = write_buf(out_fd, node_buffer, node_len);
+                        ret = write_buf(out_fd, node_buffer, node_len, "DIFF3");
                         if (ret < 0) {
                             exit(-ret);
                         }
@@ -306,7 +306,7 @@ diff_result do_diff_fd(char *inBuffer, int out_fd, size_t inLen, size_t *out_len
             *out_len += (node_array.node_size + sizeof(int) + sizeof(size_t));
             blockCount++;
             if((node_len = flatten_node_buffer(node_array, &node_buffer)) != -1) {                
-                ret = write_buf(out_fd, node_buffer, node_len);
+                ret = write_buf(out_fd, node_buffer, node_len, "DIFF2");
                 if (ret < 0) {
                     exit(-ret);
                 }
@@ -317,5 +317,7 @@ diff_result do_diff_fd(char *inBuffer, int out_fd, size_t inLen, size_t *out_len
         }
         
         free(fuzzy_hash_result);
+        close(out_fd);
+        printf("Disc %d\n", out_fd);
         return DIFF_DONE;        
 }

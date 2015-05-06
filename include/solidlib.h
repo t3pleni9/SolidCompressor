@@ -69,6 +69,7 @@ typedef struct {
 } file_d;
 
 typedef struct {
+    int id;
     char *in_buffer; 
     char *out_buffer; // NULL buffer
     file_d fd;
