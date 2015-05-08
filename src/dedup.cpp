@@ -80,7 +80,7 @@ int DeDup::deDuplicateSubBlocks(char* buffer, int curPointer, int inc, long unsi
         return 0;//TODO: return Error cases
 } 
 
-unsigned long int DeDup::deDuplicate(char *buffer, char *outBuffer, unsigned long int seg_s ) {
+unsigned long int DeDup::deDuplicate(char *buffer, char **outBuffer, unsigned long int seg_s ) {
     
     unsigned int blockCounter = 1;
     bool exists = false;    
@@ -159,29 +159,38 @@ unsigned long int DeDup::deDuplicate(char *buffer, char *outBuffer, unsigned lon
             blockCounter++;
         }
      
-        delete[] buffer;
+        
         indexOffset = 0;
         char c = 0;
-        c = (fileSize >= seg_s ? 0:1);
-        memcpy((outBuffer + indexOffset), (char*)&(c), sizeof(c));
+        c = (fileSize >= seg_s ? 0 : 1);
+        
+        // Setting size for outbuffer.
+        unsigned long int retSize = sizeof(c) + (c ? ((Index::getHeaderIndexCount() * sizeof(IndexHeader)) + 
+            sizeof(unsigned int)) : 0)  + sizeof(unsigned long int) + (c ? fileSize : seg_s);
+        
+        *outBuffer = (char *) malloc(retSize * sizeof(char));
+        
+        
+        memcpy(((*outBuffer) + indexOffset), (char*)&(c), sizeof(c));
         indexOffset += sizeof(c);
         
          //Copying index into the buffer
         if(c) {
-            indexOffset += Index::writeIndex(outBuffer); 
+            indexOffset += Index::writeIndex((*outBuffer)); 
         }    
         //Copying index into the buffer
           
             
         //Copying size into the buffer
-        memcpy((outBuffer + indexOffset), (char*)&fileSize, sizeof(unsigned long int));
+        memcpy(((*outBuffer) + indexOffset), (char*)&(c ? fileSize : seg_s), sizeof(unsigned long int));
         indexOffset += sizeof(unsigned long int);
         
         //Copy compressed data into buffer
-        memcpy((outBuffer + indexOffset), tempBuff, fileSize);
+        memcpy(((*outBuffer) + indexOffset), (c ? tempBuff : buffer), (c ? fileSize : seg_s));
         //std::cout<<strgIndex.size()<<" "<<indexOffset<<" "<<fileSize<<std::endl; 
         delete[] tempBuff;
-        return ((c?fileSize:seg_s) + indexOffset); 
+        //printf("RET: %ld S+indOFf: %ld\n", retSize, ((c ? fileSize : seg_s) + indexOffset));
+        return retSize == ((c ? fileSize : seg_s) + indexOffset) ? retSize : 0;
     }
     
     return 0;

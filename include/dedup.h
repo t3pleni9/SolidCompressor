@@ -74,7 +74,7 @@ class DeDup
     public:
         DeDup();
         virtual ~DeDup();
-        unsigned long int deDuplicate(char*, char *, unsigned long int);
+        unsigned long int deDuplicate(char*, char **, unsigned long int);
         void duplicate(char*, char*);
         void clearDictionary();
     

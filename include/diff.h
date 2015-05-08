@@ -70,25 +70,14 @@ typedef enum{
     DIFF_PIPE_IO_NULL = 9
 } diff_result;
 
-typedef enum {
-    EQUAL = 0,
-    FIRST = 1,
-    SECND = 2,
-    NFSBL = 3, 
-    ERROR = 4
-} comp_result;
 
-//90409028 90388295 90319955
 
 #define MAX_DIFF 1000000
-#define DIFF_BLOCK 1000000 // find an algo to get the number of blocks in range of 101 to 999
-#define DIFF_THLD 10
+#define DIFF_BLOCK 10000
+#define DIFF_THLD 50
 #define MAX_INT 2000000
 typedef unsigned long uLong;
 
-/* 
- * TODO: Use ssdeep to check for similarity
- */
 diff_result do_diff(char *inBuffer, char **outBuffer, size_t inLen, size_t *outLen); 
 diff_result do_diff_fd(char *inBuffer, int out_fd, size_t inLen, size_t *out_len);
 diff_result do_patch(char *deltaBuffer, char *baseBuffer, char **patchBuffer, size_t deltaLen, size_t baseLen, size_t *patchLen);

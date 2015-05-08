@@ -33,6 +33,8 @@
 extern "C" {
 #endif
 
+//TODO: Create error messages.
+
 typedef enum {
     SPIPE_DONE = 1,
     SPIPE_NOT_SET = 2,   
@@ -69,12 +71,13 @@ typedef struct {
 } file_d;
 
 typedef struct {
-    int id;
+    int id; // For debugging purpose
     char *in_buffer; 
     char *out_buffer; // NULL buffer
     file_d fd;
     size_t in_len;
     size_t out_len;  
+    solid_result end_result;
 }t_solid_data;
 
 typedef t_solid_data* SOLID_DATA;
@@ -88,6 +91,8 @@ extern char* errorMsg;
 #ifndef CHUNK
 #define CHUNK 40000
 #endif
+
+void test_node();
 
 solid_result de_dup(SOLID_DATA buffer);
 //solid_result duplicate(SOLID_DATA buffer);
