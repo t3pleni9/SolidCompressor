@@ -5,15 +5,15 @@
 
 
 int main(int argc, char **argv) {
-        /*char mybuf[4096];
+        char mybuf[4096];
         setvbuf(stdin, mybuf, _IOFBF, 4096);
         FILE *inFile, *outFile;
         //char *buffer = (char*)malloc(SEG_S *sizeof(char));
         //char *outBuffer = (char*)malloc(2*SEG_S *sizeof(char));
         
         //size_t outLen = 0;
-        inFile = fopen("/home/justin/temp4", "rb");
-        outFile = fopen("/home/justin/compFile.t.out2", "wb");
+        inFile = fopen("/home/justin/compFile.t", "rb");
+        outFile = fopen("/home/justin/compFile.t.out4", "wb");
         if(inFile) {
             //fread(buffer, SEG_S *sizeof(unsigned char), 1, inFile);
             solid_compress_fd(fileno(inFile), fileno(outFile));
@@ -24,8 +24,8 @@ int main(int argc, char **argv) {
             
         }
         fclose(inFile);
-        fclose(outFile);*/
-        test_node();
+        fclose(outFile);
+        //test_node();
         return 1;
              
         

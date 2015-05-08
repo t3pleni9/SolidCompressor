@@ -73,7 +73,7 @@ typedef enum{
 
 
 #define MAX_DIFF 1000000
-#define DIFF_BLOCK 10000
+#define DIFF_BLOCK 1000000
 #define DIFF_THLD 50
 #define MAX_INT 2000000
 typedef unsigned long uLong;
