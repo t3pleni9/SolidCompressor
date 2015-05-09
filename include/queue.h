@@ -1,6 +1,5 @@
-
 /*
- * solidlib.h
+ * queue.h
  * 
  * Copyright 2015 Justin Jose <justinjose999@gmail.com>
  * 
@@ -22,8 +21,9 @@
  * 
  */
 
-#ifndef SOLIDLIB_H
-#define SOLIDLIB_H
+
+#ifndef QUEUE_H
+#define QUEUE_H
 
 #include "scons.h"
 
@@ -31,27 +31,25 @@
 extern "C" {
 #endif
 
-//TODO: Create error messages.
-
-extern char* errorMsg;
-
-void test_node();
-
-//solid_result de_dup(SOLID_DATA buffer);
-//solid_result duplicate(SOLID_DATA buffer);
-
-//SOLID_RESULT diff(SOLID_DATA buffer);
-//solid_result patch(SOLID_DATA buffer);
-
-//SOLID_RESULT stream_compress(SOLID_DATA buffer);
-//solid_result stream_decomp(SOLID_DATA buffer);
-
-
-SOLID_RESULT solid_compress(char* inbuffer, char *outbuffer, size_t in_len, size_t * out_len);
-SOLID_RESULT solid_compress_fd(int in_fd, int dump_fd);
+typedef struct Node* PTRNODE;
 
 #ifdef __cplusplus
 }
-#endif
 
-#endif
+class Queue
+{
+    public:
+        Queue();
+        void push(SOLID_DATA data);
+        SOLID_DATA pop();
+        int empty();
+        SOLID_DATA front();
+        virtual ~Queue();
+    
+    private:
+        PTRNODE head;
+        PTRNODE tail;
+};
+
+#endif 
+#endif /* QUEUE_H */ 

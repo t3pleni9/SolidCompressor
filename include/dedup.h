@@ -28,6 +28,7 @@
 #include <openssl/sha.h>
 #include <unordered_map>
 
+#include "scons.h"
 #include "index.h"
 
 #ifndef DEDUP_H
@@ -50,11 +51,7 @@
  **/
 #define BLOCK_X 8
 
-/**
- * @brief 
- * Segment Size
- **/
-#define SEG_S 200000000
+
 
 /**
  * @brief 
@@ -74,7 +71,7 @@ class DeDup
     public:
         DeDup();
         virtual ~DeDup();
-        unsigned long int deDuplicate(char*, char **, unsigned long int);
+        SOLID_RESULT de_dup(SOLID_DATA buffer);
         void duplicate(char*, char*);
         void clearDictionary();
     
@@ -82,7 +79,7 @@ class DeDup
         typedef std::unordered_map<std::string, IndexNode> t_index;
         t_index strgIndex;
         Index node;       
-        
+        unsigned long int deDuplicate(char*, char **, unsigned long int);
         int deDuplicateSubBlocks(char*, int, int, unsigned long int*); 
         bool nodeExists(std::string);
         int readBlock(std::fstream*, char*, int, int);

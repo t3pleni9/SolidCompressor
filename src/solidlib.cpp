@@ -22,20 +22,53 @@
  */
 
 #include <zlib.h>
-#include <queue>
 
 #include "dedup.h"
 #include "diff.h"
-
+#include "queue.h"
 #include "solidlib.h"
 
 
-std::queue<t_solid_data> compQueue;
+//6000000
+
+Queue compQueue;
 pthread_mutex_t lock;
 
 unsigned long int netIn = 0;
 unsigned long int netOut = 0;
 
+
+static void printStats() {
+    char in[10], out[10];
+    unsigned long int sizes[] = {1, 1000, 1000000, 1000000000 };
+    char post[5] = {"BKMG"};
+    int i = 0;
+    if(netIn) {
+        for(;i<4;i++) {
+            if(netIn < sizes[i]) {
+                sprintf(in, "%.02f%c", (double)netIn / sizes[i-1], post[i-1]);
+                break;
+            }
+        }
+    } else {
+        sprintf(in, "%luB", netIn);
+    }
+    if(netOut) {
+        for(i = 0;i<4;i++) {
+            if(netOut < sizes[i]) {
+                sprintf(out, "%.02f%c", (double)netOut / sizes[i-1], post[i-1]);
+                break;
+            }
+        }
+    } else {
+        sprintf(in, "%luB", netOut);
+    }
+    
+    fprintf(stderr, "Net IN: %s Net OUT: %s\n", in, out);
+}
+
+SOLID_RESULT stream_compress(SOLID_DATA buffer);
+//SOLID_RESULT stream_decomp(SOLID_DATA buffer);
 void test_node() {
     SOLID_DATA node1 = (SOLID_DATA)malloc(sizeof(t_solid_data));
     
@@ -49,65 +82,17 @@ void test_node() {
     node1->id = 23;
     node1->fd.in = 1;
     node1->fd.out = 2;
-    compQueue.push(*node1);
-    t_solid_data node2 = compQueue.front();
-    compQueue.pop();
+    compQueue.push(node1);
+    t_solid_data node2 = *((SOLID_DATA)compQueue.pop());
     printf("InB: %s Len: %d OutB: %s Len: %d Id: %d FdIn: %d FdOut: %d\n", node2.in_buffer, node2.in_len, node2.out_buffer, node2.out_len, node2.id, node2.fd.in, node2.fd.out);
 }
-solid_result de_dup(SOLID_DATA buffer) {
+/*SOLID_RESULT de_dup(SOLID_DATA buffer) {
     DeDup deDup;
-    buffer->out_len = deDup.deDuplicate(buffer->in_buffer, &buffer->out_buffer, (buffer->in_len < SEG_S ? buffer->in_len : SEG_S));
-    if(!buffer->out_buffer) {
-        buffer->end_result = SDEDUP_NULL_POINTER;
-        return buffer->end_result;
-    } else if(!buffer->out_len) {
-        buffer->end_result = SDEDUP_ERROR;
-        return buffer->end_result;
-    }
-    
-    buffer->end_result = SDEDUP_DONE;
-    return buffer->end_result;
-}
+    return deDup.de_dup(buffer);
+}*/
 
-solid_result diff(SOLID_DATA buffer) {    
-    diff_result diff;
-    if(buffer->fd.out != -1) {
-        diff = do_diff_fd(buffer->in_buffer, buffer->fd.out, buffer->in_len, &buffer->out_len);
-    } else {
-        diff = do_diff(buffer->in_buffer, &buffer->out_buffer, buffer->in_len, &buffer->out_len);
-    }
-    
-    switch(diff) {
-        case DIFF_DONE: buffer->end_result = SDIFF_DONE;
-        break;
-        case DIFF_NULL_POINTER: buffer->end_result = SDIFF_NULL_POINTER;
-        break;
-        case DIFF_PIPE_ERROR: buffer->end_result = SPIPE_ERROR;
-        break;
-        default: fprintf(stderr, "ERROR: Diff error, %d %s\n", (int)diff, errorMsg);
-            buffer->end_result = SDIFF_ERROR;
-    }
-    
-    return buffer->end_result;
-}
 
-static int fill_buffer(SOLID_DATA buffer, size_t buf_len) {
-    buffer->in_len = 0;
-    int readed = 0;
-    do {
-        readed = read( buffer->fd.in, (buffer->in_buffer + buffer->in_len), buf_len - buffer->in_len);
-        if(readed <= 0) {
-            return readed;
-        } else {
-            buffer->in_len += readed;
-        }
-    } while(buffer->in_len < buf_len);
-    
-    return readed;
-
-}
-
-solid_result wait_for_finish(pthread_t t_th) {
+SOLID_RESULT wait_for_finish(pthread_t t_th) {
     void* t_res = NULL;
     int ret = pthread_join(t_th, &t_res );
     if (ret) {
@@ -118,7 +103,7 @@ solid_result wait_for_finish(pthread_t t_th) {
     } 
           
     if (t_res ) {
-        solid_result retResult = *(solid_result *)t_res ;
+        SOLID_RESULT retResult = *(SOLID_RESULT *)t_res ;
         return retResult;
     }
        
@@ -127,37 +112,42 @@ solid_result wait_for_finish(pthread_t t_th) {
 
 void *stream_compress_thread(void *_arg) {
     SOLID_DATA buffer = (SOLID_DATA)_arg;
-    t_solid_data qBuffer;
+    SOLID_DATA qBuffer;
         
     while(1) {
         
         pthread_mutex_lock(&lock);  
         if(!compQueue.empty()) {
-            qBuffer =  compQueue.front();
-            compQueue.pop();
+            qBuffer =  (SOLID_DATA)compQueue.pop();
             pthread_mutex_unlock(&lock);
         } else {
             pthread_mutex_unlock(&lock);
             continue;
         }
         
-        if(qBuffer.in_len == 0 && qBuffer.out_len == 0 ) {
-            sleep(2);
+        if(qBuffer->in_len == 0 && qBuffer->out_len == 0 ) {
+            //sleep(2);
             buffer->end_result = SQU_DONE;
             pthread_exit(&buffer->end_result);
         }
         
-        buffer->in_buffer = qBuffer.in_buffer;
-        buffer->in_len = qBuffer.in_len;
-        solid_result result = stream_compress(&qBuffer);
-        if( result != SSTRM_DONE ) {
-            buffer->end_result = qBuffer.end_result;
+        buffer->in_buffer = NULL;//qBuffer->in_buffer;
+        buffer->in_len = 0;//qBuffer->in_len;
+        SOLID_RESULT result = stream_compress(qBuffer);
+        buffer->end_result = qBuffer->end_result;
+        if(qBuffer->in_buffer) {
+            free(qBuffer->in_buffer);
+        }
+        if(qBuffer) {
+            free(qBuffer);
+        }
+        if( result != SSTRM_DONE ) {            
             pthread_exit(&buffer->end_result);
         }
     }
 }
 
-solid_result stream_compress(SOLID_DATA buffer) {
+SOLID_RESULT stream_compress(SOLID_DATA buffer) {
     
     
     int ret, flush, in_offset = 0;
@@ -249,7 +239,7 @@ void *stream_compress_pipe(void *_args) {
     pip_buffer->fd.in = buffer->fd.in;
     pip_buffer->fd.out = buffer->fd.out;
     (emptyBuffer.in_len = 0, emptyBuffer.out_len = 0);
-    solid_result retResult;
+    SOLID_RESULT retResult;
     buffer->id = 0;
     if(buffer->fd.in != -1) {
         ret = pthread_create(&t_que, NULL, stream_compress_thread, pip_buffer);
@@ -262,11 +252,11 @@ void *stream_compress_pipe(void *_args) {
         }
         
         if(!buffer->in_buffer) {
-           buffer->in_buffer = (char *)malloc(CHUNK);
+           buffer->in_buffer = (char *)malloc(PIPE_SEG);
         }
         
         while(1) {
-            readed = fill_buffer(buffer, CHUNK);
+            readed = fill_buffer(buffer, PIPE_SEG);
             
             if( readed < 0) {
                 fprintf(stderr, "Error: failed to read stream");
@@ -276,7 +266,7 @@ void *stream_compress_pipe(void *_args) {
             } else if(!buffer->in_len) {
                
                 pthread_mutex_lock(&lock);
-                compQueue.push(emptyBuffer);
+                compQueue.push(&emptyBuffer);
                 pthread_mutex_unlock(&lock);
                 if((retResult = wait_for_finish(t_que)) != SQU_DONE) {
                     fprintf(stderr, "ERROR: Stream compress thread not done\n");
@@ -289,9 +279,8 @@ void *stream_compress_pipe(void *_args) {
             } else {
                 buffer->id++;
                 pthread_mutex_lock(&lock);
-                compQueue.push(*buffer);
-                pthread_mutex_unlock(&lock);
-                
+                compQueue.push(buffer);
+                pthread_mutex_unlock(&lock);                
             }
         }
     }
@@ -315,8 +304,7 @@ void *diff_pipe(void *_args) {
     }
     
     SOLID_DATA strm_buffer = (SOLID_DATA)malloc(sizeof(t_solid_data));
-    solid_result retResult;
-    diff_result diff;
+    SOLID_RESULT retResult;
     SOLID_DATA buffer = (SOLID_DATA)_args;
     strm_buffer->in_len = buffer->in_len;
     strm_buffer->fd.out = buffer->fd.out;
@@ -332,14 +320,7 @@ void *diff_pipe(void *_args) {
         goto diff_out;
     }
     
-    diff = do_diff_fd(buffer->in_buffer, buffer->fd.out, buffer->in_len, &buffer->out_len);
-    switch(diff) {
-        case DIFF_DONE: buffer->end_result = SDIFF_DONE; break;
-        case DIFF_NULL_POINTER: buffer->end_result = SDIFF_NULL_POINTER; break;
-        case DIFF_PIPE_ERROR: buffer->end_result = SPIPE_ERROR; break;
-        default: perror(errorMsg);
-            buffer->end_result = SDIFF_ERROR;
-    }
+    diff(buffer);
     
     if((retResult = wait_for_finish(t_pipe)) != SPIPE_DONE) {
         fprintf(stderr, "ERROR: Pipe thread not done\n");
@@ -354,18 +335,18 @@ void *diff_pipe(void *_args) {
         pthread_exit(&buffer->end_result);
 }
 
-solid_result solid_compress_fd(int in_fd, int dump_fd) {
+SOLID_RESULT solid_compress_fd(int in_fd, int dump_fd) {
     SOLID_DATA de_dup_buffer, diff_buffer;
     de_dup_buffer = (SOLID_DATA)malloc(sizeof(t_solid_data));
     diff_buffer = (SOLID_DATA)malloc(sizeof(t_solid_data));
     
     int ret = 0;
     
-    solid_result retResult = SPIPE_DONE;
+    SOLID_RESULT retResult = SPIPE_DONE;
     pthread_t t_diff;
     
     int first_run = 1;
-    
+    DeDup deDup;
     while(1) {
         
         if(in_fd > 0 && dump_fd > 0) {
@@ -394,7 +375,8 @@ solid_result solid_compress_fd(int in_fd, int dump_fd) {
             goto out;             
         } else {
             de_dup_buffer->out_buffer = NULL;
-            if(de_dup(de_dup_buffer) == SDEDUP_DONE) {
+            deDup.clearDictionary();
+            if(deDup.de_dup(de_dup_buffer) == SDEDUP_DONE) {
                     if(!first_run) {                        
                         if((retResult = wait_for_finish(t_diff)) != SDIFF_DONE) {
                             fprintf(stderr, "ERROR: Diff thread not done\n");
@@ -445,21 +427,24 @@ solid_result solid_compress_fd(int in_fd, int dump_fd) {
             free(de_dup_buffer->in_buffer);
         if(de_dup_buffer->out_buffer)
             free(de_dup_buffer->out_buffer);           
-        
+        if(de_dup_buffer)
+            free(de_dup_buffer);
         pthread_mutex_destroy(&lock);
        
+        printStats();
         return retResult;
 
 }
 
-solid_result solid_compress(char* inbuffer, char *outbuffer, size_t in_len, size_t * out_len) {
+SOLID_RESULT solid_compress(char* inbuffer, char *outbuffer, size_t in_len, size_t * out_len) {
     
     t_solid_data buffer;
     buffer.in_buffer = inbuffer; 
     buffer.out_buffer = outbuffer; // NULL buffer
     buffer.in_len = in_len;
     t_solid_data diff_buffer, strm_buffer;
-    if(de_dup(&buffer) == SDEDUP_DONE) {
+    DeDup deDup;
+    if(deDup.de_dup(&buffer) == SDEDUP_DONE) {
         if(buffer.out_len) 
         printf("Done dedup %d %d\n", buffer.in_len,buffer.out_len);
         else 
@@ -470,8 +455,7 @@ solid_result solid_compress(char* inbuffer, char *outbuffer, size_t in_len, size
         diff_buffer.fd.in = -1;
         diff_buffer.fd.out = -1;
        // memcpy(buffer.in_buffer, buffer.out_buffer, buffer.out_len);
-        solid_result result = diff(&diff_buffer);
-        printf("%d\n", (int)result);
+        SOLID_RESULT result = diff(&diff_buffer);
         printf("Diff done %d %d\n", diff_buffer.in_len, diff_buffer.out_len);
         strm_buffer.in_buffer = diff_buffer.out_buffer;
         strm_buffer.out_buffer = outbuffer;

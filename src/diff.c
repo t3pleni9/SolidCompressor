@@ -20,39 +20,12 @@
  * 
  * 
  */
- 
+
+
 #include "diff.h"
 
+
 char errorMsg[100];
-
-int write_buf(int fd, const void *buf, int size)
-{
-	int ret;
-	int pos = 0;
-
-	while (pos < size) {
-		ret = write(fd, (char*)buf + pos, size - pos);
-		if (ret < 0) {
-			ret = -errno;
-			fprintf(stderr, "ERROR: failed to dump stream. %s",
-					strerror(-ret));
-			goto out;
-		}
-		if (!ret) {
-			ret = -EIO;
-			fprintf(stderr, "ERROR: failed to dump stream. %s",
-					strerror(-ret));
-			goto out;
-		}
-        
-        pos += ret;
-        
-	}
-	ret = 0;
-
-out:
-	return ret;
-}
 
 static NODESP build_node_buffer(char *node_buffer) {
     
@@ -166,7 +139,7 @@ diff_result do_patch(char *deltaBuffer, char *baseBuffer, char **patchBuffer, si
  * TODO: Do something about the last block 
  */
 
-diff_result do_diff(char *inBuffer, char **outBuffer, size_t inLen, size_t *out_len) {
+static diff_result do_diff(char *inBuffer, char **outBuffer, size_t inLen, size_t *out_len) {
         time_t t;
         srand((unsigned) time(&t));
         unsigned int blockCount = inLen / DIFF_BLOCK, i, j;
@@ -253,7 +226,7 @@ diff_result do_diff(char *inBuffer, char **outBuffer, size_t inLen, size_t *out_
 }
 
 //TODO: Free every malloc buffers on error conditions.
-diff_result do_diff_fd(char *inBuffer, int out_fd, size_t inLen, size_t *out_len) {
+static diff_result do_diff_fd(char *inBuffer, int out_fd, size_t inLen, size_t *out_len) {
         time_t t;
         srand((unsigned) time(&t));
         unsigned int blockCount = inLen / DIFF_BLOCK, i, j;
@@ -366,4 +339,27 @@ diff_result do_diff_fd(char *inBuffer, int out_fd, size_t inLen, size_t *out_len
         free(fuzzy_hash_result);
         close(out_fd);
         return DIFF_DONE;        
+}
+
+SOLID_RESULT diff(SOLID_DATA buffer) {    
+    diff_result diff;
+    if(buffer->fd.out != -1) {
+        diff = do_diff_fd(buffer->in_buffer, buffer->fd.out, buffer->in_len, &buffer->out_len);
+    } else {
+        diff = do_diff(buffer->in_buffer, &buffer->out_buffer, buffer->in_len, &buffer->out_len);
+    }
+    
+    switch(diff) {
+        case DIFF_DONE: buffer->end_result = SDIFF_DONE;
+        break;
+        case DIFF_NULL_POINTER: buffer->end_result = SDIFF_NULL_POINTER;
+        break;
+        case DIFF_PIPE_ERROR: buffer->end_result = SPIPE_ERROR;
+        break;
+        default: fprintf(stderr, "ERROR: Diff error, %d %s\n", (int)diff, errorMsg);
+            buffer->end_result = SDIFF_ERROR;
+    }
+    if(buffer->in_buffer)
+        free(buffer->in_buffer);
+    return buffer->end_result;
 }

@@ -32,7 +32,7 @@
 #include <iostream>
 #include <stdio.h>
 #include <assert.h>
-
+#include <unistd.h>
 
 DeDup::DeDup()
 {
@@ -43,6 +43,20 @@ DeDup::DeDup()
 DeDup::~DeDup()
 {
     
+}
+
+SOLID_RESULT DeDup::de_dup(SOLID_DATA buffer) {
+    buffer->out_len = deDuplicate(buffer->in_buffer, &buffer->out_buffer, (buffer->in_len < SEG_S ? buffer->in_len : SEG_S));
+    if(!buffer->out_buffer) {
+        buffer->end_result = SDEDUP_NULL_POINTER;
+        return buffer->end_result;
+    } else if(!buffer->out_len) {
+        buffer->end_result = SDEDUP_ERROR;
+        return buffer->end_result;
+    }
+    
+    buffer->end_result = SDEDUP_DONE;
+    return buffer->end_result;
 }
 
 bool DeDup::nodeExists(std::string hashValue) {

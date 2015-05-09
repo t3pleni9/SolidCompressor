@@ -19,14 +19,14 @@ MKBDIR = mkdir -p $(BINDIR)
 LIBS = -lsolidComp -lm -lcrypto -lfuzzy -lzd -lz -lpthread 
 TESTLIBS = -lm -lcrypto -lfuzzy -lzd -lz -lpthread 
 
-_DEPS = hash.h index.h dedup.h diff.h solidlib.h
+_DEPS = scons.h hash.h index.h dedup.h diff.h queue.h solidlib.h 
 DEPS = $(patsubst %,$(IDIR)/%,$(_DEPS))
 
-_OBJ = hash.o index.o dedup.o diff.o solidlib.o
+_OBJ = common.o hash.o index.o dedup.o diff.o queue.o solidlib.o
 OBJ = $(patsubst %,$(ODIR)/%,$(_OBJ))
 
 
-$(ODIR)/%.o: $(SDIR)/%.c  $(DEPS)
+$(ODIR)/%.o: $(SDIR)/%.c $(DEPS)
 	$(MKODIR)
 	$(CC) -c  -o $@ $< $(CFLAGS)
 
