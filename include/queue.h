@@ -31,6 +31,8 @@
 extern "C" {
 #endif
 
+extern char errorMsg[100];
+
 typedef struct Node* PTRNODE;
 
 #ifdef __cplusplus

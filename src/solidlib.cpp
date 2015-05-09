@@ -26,6 +26,7 @@
 #include "dedup.h"
 #include "diff.h"
 #include "queue.h"
+#include "streamc.h"
 #include "solidlib.h"
 
 
@@ -149,82 +150,31 @@ void *stream_compress_thread(void *_arg) {
 
 SOLID_RESULT stream_compress(SOLID_DATA buffer) {
     
+    SOLID_RESULT retResult;
     
-    int ret, flush, in_offset = 0;
-    unsigned have;
-    z_stream strm;
-    //unsigned char in[CHUNK];
-    unsigned char out[CHUNK];
-    int level = Z_DEFAULT_COMPRESSION;
-    
-    buffer->out_len = 0;
-    
-    /* allocate deflate state */
-    strm.zalloc = Z_NULL;
-    strm.zfree = Z_NULL;
-    strm.opaque = Z_NULL;
-    ret = deflateInit(&strm, level);
-    if (ret != Z_OK)
-        return SSTRM_ERROR; // use cases for ret after compile
-    netIn += buffer->in_len;
-    
-    /* compress until end of file */
-    do {
-         if (!(buffer->in_buffer + in_offset)) {
-            (void)deflateEnd(&strm);
-            return SSTRM_ERROR;
-        }
-        strm.avail_in = buffer->in_len > CHUNK ? CHUNK : buffer->in_len;
-        buffer->in_len = buffer->in_len > CHUNK ? buffer->in_len - CHUNK : 0;
-        
-       
-        flush = !buffer->in_len ? Z_FINISH : Z_NO_FLUSH;
-        strm.next_in = (Bytef*)(buffer->in_buffer + in_offset);
-        in_offset += buffer->in_len > CHUNK ? CHUNK : buffer->in_len;
-
-        /* run deflate() on input until output buffer not full, finish
-           compression if all of source has been read in */
-        do {
-            strm.avail_out = CHUNK;
-            strm.next_out = out;
-            ret = deflate(&strm, flush);    /* no bad return value */
-            assert(ret != Z_STREAM_ERROR);  /* state not clobbered */
-            have = CHUNK - strm.avail_out;
-            char *indexed = (char *)malloc(have + sizeof(have));
-            memcpy(indexed, (char *)&have, sizeof(have));
-            memcpy((indexed + sizeof(have)), out, have);
-            if(buffer->fd.out != -1) {
-                
-                int ret = write_buf(buffer->fd.out, indexed, have+sizeof(have));
-                if (ret < 0) {
-                    (void)deflateEnd(&strm);
-                    return SPIPE_ERROR;                
-                }                
-                
-            } else {
-                if (memcpy((buffer->out_buffer + buffer->out_len), indexed, have+sizeof(have))) {
-                    buffer->out_len += have;
-                } else {
-                    (void)deflateEnd(&strm);
-                    return SSTRM_ERROR;
-                }
+    if((retResult = (*(buffer->scomp))(buffer->in_buffer, &buffer->out_buffer, 
+        buffer->in_len, &buffer->out_len)) == SSTRM_DONE) {
+        if(buffer->fd.out != -1) {            
+            int ret = write_buf(buffer->fd.out, (char *)&buffer->out_len, sizeof(buffer->out_len));
+            if(ret < 0) {
+                return SPIPE_ERROR;
             }
             
-            if(indexed)
-                free(indexed);
+            ret = write_buf(buffer->fd.out, buffer->out_buffer, buffer->out_len);
+            if (ret < 0) {
+                return SPIPE_ERROR;                
+            }    
             
-            netOut += have+sizeof(have);
-            
-        } while (strm.avail_out == 0);
-        assert(strm.avail_in == 0);     /* all input will be used */
-
-        /* done when last data in file processed */
-    } while (flush != Z_FINISH);
-    assert(ret == Z_STREAM_END);        /* stream will be complete */
-
-    /* clean up and return */
-    (void)deflateEnd(&strm);
-    return SSTRM_DONE;
+            if(buffer->out_buffer) {
+                free(buffer->out_buffer);
+            }            
+        } 
+    } else {
+        fprintf(stderr, "ERROR: Stream compress error - %s", errorMsg);
+        return retResult;
+    }
+   
+    return retResult;
 }
 
 
@@ -308,6 +258,8 @@ void *diff_pipe(void *_args) {
     SOLID_DATA buffer = (SOLID_DATA)_args;
     strm_buffer->in_len = buffer->in_len;
     strm_buffer->fd.out = buffer->fd.out;
+    strm_buffer->scomp = buffer->scomp;
+    
     buffer->fd.out = pipefd[1];
     strm_buffer->fd.in = pipefd[0];
     
@@ -339,6 +291,10 @@ SOLID_RESULT solid_compress_fd(int in_fd, int dump_fd) {
     SOLID_DATA de_dup_buffer, diff_buffer;
     de_dup_buffer = (SOLID_DATA)malloc(sizeof(t_solid_data));
     diff_buffer = (SOLID_DATA)malloc(sizeof(t_solid_data));
+    switch(scompressor) {
+        case 'z': diff_buffer->scomp = (zlib_compress);
+        break;
+    }
     
     int ret = 0;
     
@@ -347,6 +303,7 @@ SOLID_RESULT solid_compress_fd(int in_fd, int dump_fd) {
     
     int first_run = 1;
     DeDup deDup;
+    
     while(1) {
         
         if(in_fd > 0 && dump_fd > 0) {
@@ -383,12 +340,12 @@ SOLID_RESULT solid_compress_fd(int in_fd, int dump_fd) {
                             goto out;
                         }                        
                     }
-                  /* //Debug section
+                   //Debug section
                    if(de_dup_buffer->out_len) 
                        printf("Done dedup %d %d\n", de_dup_buffer->in_len, de_dup_buffer->out_len);
                    else 
                        printf("out len is null\n");
-                  */
+                  
                  
                 diff_buffer->in_buffer = (char *) malloc(de_dup_buffer->out_len);
                 

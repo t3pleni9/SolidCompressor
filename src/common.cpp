@@ -10,6 +10,9 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+char errorMsg[100];
+
 extern int write_buf(int fd, const void *buf, int size) {
 	int ret;
 	int pos = 0;

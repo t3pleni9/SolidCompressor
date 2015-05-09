@@ -22,8 +22,8 @@
  */
 
 
-#ifndef INDEX_H
-#define INDEX_H
+#ifndef __INDEX_H
+#define __INDEX_H
 
 #include <stdio.h>
 #include <openssl/sha.h>

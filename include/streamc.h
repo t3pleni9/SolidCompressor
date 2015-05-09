@@ -1,6 +1,5 @@
-
 /*
- * solidlib.h
+ * streamc.h
  * 
  * Copyright 2015 Justin Jose <justinjose999@gmail.com>
  * 
@@ -22,20 +21,23 @@
  * 
  */
 
-#ifndef __SOLIDLIB_H
-#define __SOLIDLIB_H
+#include <zlib.h>
+#include <stdio.h>
+#include <assert.h>
 
 #include "scons.h"
+
+#ifndef __STREAMC_H
+#define __STREAMC_H
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+extern int level;
 extern char errorMsg[100];
-char scompressor = 'z';
 
-SOLID_RESULT solid_compress(char* inbuffer, char *outbuffer, size_t in_len, size_t * out_len);
-SOLID_RESULT solid_compress_fd(int in_fd, int dump_fd);
+SOLID_RESULT zlib_compress(char *in_buffer, char **out_buffer, size_t in_len, size_t *out_len);
 
 #ifdef __cplusplus
 }

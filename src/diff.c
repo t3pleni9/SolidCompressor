@@ -25,7 +25,7 @@
 #include "diff.h"
 
 
-char errorMsg[100];
+
 
 static NODESP build_node_buffer(char *node_buffer) {
     

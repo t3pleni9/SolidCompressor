@@ -22,8 +22,8 @@
  */
 
 
-#ifndef DIFF_H
-#define DIFF_H
+#ifndef __DIFF_H
+#define __DIFF_H
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -41,6 +41,8 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+extern char errorMsg[100];
 
 typedef struct{
     unsigned int bit:1;
