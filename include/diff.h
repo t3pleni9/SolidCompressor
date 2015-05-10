@@ -78,14 +78,16 @@ typedef enum{
 
 #define MAX_DIFF 1000000
 #define DIFF_BLOCK 1000000
+#define PATCH_BLOCK (DIFF_BLOCK + sizeof(int) + sizeof(size_t))
 #define DIFF_THLD 10
 #define MAX_INT 2000000
 
 
 
 SOLID_RESULT zdelta_diff(void* _args);
+SOLID_RESULT zdelta_patch(void* _args);
 
-diff_result do_patch(char *deltaBuffer, char *baseBuffer, char **patchBuffer, size_t deltaLen, size_t baseLen, size_t *patchLen);
+//diff_result _do_patch(char *deltaBuffer, char *baseBuffer, char **patchBuffer, size_t deltaLen, size_t baseLen, size_t *patchLen);
 
 #ifdef __cplusplus
 }

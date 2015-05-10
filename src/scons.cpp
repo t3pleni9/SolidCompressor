@@ -35,11 +35,10 @@ extern int write_buf(int fd, const void *buf, int size) {
     
 	ret = 0;
     out:
-        return ret;
+        return pos;
 }
 
-extern int fill_buffer(SOLID_DATA buffer, size_t buf_len) {
-    buffer->in_len = 0;
+extern int refill_buffer(SOLID_DATA buffer, size_t buf_len) {
     int readed = 0;
     do {
         readed = read( buffer->fd.in, (buffer->in_buffer + buffer->in_len), buf_len - buffer->in_len);
@@ -53,6 +52,25 @@ extern int fill_buffer(SOLID_DATA buffer, size_t buf_len) {
     return readed;
 
 }
+
+extern int fill_buffer(SOLID_DATA buffer, size_t buf_len) {
+    buffer->in_len = 0;
+    int readed = refill_buffer(buffer, buf_len);
+    /*int readed = 0;
+    do {
+        readed = read( buffer->fd.in, (buffer->in_buffer + buffer->in_len), buf_len - buffer->in_len);
+        if(readed <= 0) {
+            return readed;
+        } else {
+            buffer->in_len += readed;
+        }
+    } while(buffer->in_len < buf_len);
+    */
+    return readed;
+
+}
+
+
 
 #ifdef __cplusplus
 }

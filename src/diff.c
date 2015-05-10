@@ -27,11 +27,11 @@
 
 
 
-static NODESP build_node_buffer(char *node_buffer) {
+static NODESP build_node_buffer(char *node_buffer, int *_offset_) {
     
     if(!node_buffer)
         return NULL;
-    int offset = 0;
+    int offset = *_offset_;
     NODESP node = (NODESP) malloc(sizeof(_node_t));
     if(!node) 
         return NULL;
@@ -44,7 +44,7 @@ static NODESP build_node_buffer(char *node_buffer) {
     if(memcpy((char *)&node->node_size, (node_buffer + offset), sizeof(node->node_size)) == NULL) {
         return NULL;
     }
-    
+    printf("here %d\n", node->ref_node);
     node->data = (char *)malloc(node->node_size);
     if(!node->data)
         return NULL;
@@ -53,6 +53,10 @@ static NODESP build_node_buffer(char *node_buffer) {
     if(memcpy(node->data, (node_buffer + offset), node->node_size) == NULL) {
         return NULL;
     }
+    
+    offset += node->node_size;
+    
+    *_offset_ = offset;
     
     return node;
 
@@ -118,7 +122,7 @@ static diff_result _do_diff(const unsigned char *inBuffer, const unsigned char *
     return DIFF_DONE;
 }
 
-diff_result do_patch(char *deltaBuffer, char *baseBuffer, char **patchBuffer, size_t deltaLen, size_t baseLen, size_t *patchLen) {
+static diff_result _do_patch(char *deltaBuffer, char *baseBuffer, char **patchBuffer, size_t deltaLen, size_t baseLen, size_t *patchLen) {
     
     Bytef *tar = NULL;
     uLong t_size = 0;
@@ -337,8 +341,53 @@ static diff_result do_diff_fd(char *inBuffer, int out_fd, size_t inLen, size_t *
         }
         
         free(fuzzy_hash_result);
-        close(out_fd);
         return DIFF_DONE;        
+}
+
+static diff_result do_patch_fd(int in_fd, size_t *out_len) {
+    t_solid_data buffer;
+    buffer.in_buffer = (char *)malloc(PATCH_BLOCK);
+    buffer.fd.in = in_fd;
+    buffer.out_len = 0;
+    buffer.in_len = 0;
+    while(1) {
+        //buffer.out_len = 0;
+        int ret = refill_buffer(&buffer, PATCH_BLOCK);
+        printf("ret %d %d %d\n", ret, buffer.in_len, buffer.out_len);
+        if(ret < 0)
+            break;
+        
+        NODESP node = build_node_buffer(buffer.in_buffer, &buffer.out_len);
+        printf("%d %d %d %d\n", node->node_size, node->ref_node, buffer.in_len, buffer.out_len);
+        if(node->ref_node == -1 && node->node_size == DIFF_BLOCK) {
+            buffer.in_len = 0;
+            buffer.out_len = 0;
+        } else {
+            if(node->node_size != DIFF_BLOCK && node->ref_node == -1)
+                printf("Stupid shit\n");
+            memcpy((char *)&node->node_size, (buffer.in_buffer + buffer.out_len + sizeof(node->node_size)), sizeof(node->node_size));
+            char *temp = (char *)malloc(PATCH_BLOCK - buffer.out_len);
+            memcpy(temp, (buffer.in_buffer + buffer.out_len), PATCH_BLOCK - buffer.out_len);
+            memset(buffer.in_buffer, 0, PATCH_BLOCK);
+            memcpy(buffer.in_buffer, temp, PATCH_BLOCK - buffer.out_len);
+            buffer.in_len = PATCH_BLOCK - buffer.out_len;
+            
+            free(temp);
+            memcpy((char *)&node->node_size, (buffer.in_buffer + sizeof(node->node_size)), sizeof(node->node_size));
+            buffer.out_len = 0;
+            
+        }
+        free(node);
+        
+        if(ret == 0)
+            break;
+    }
+}
+
+SOLID_RESULT zdelta_patch(void* _args) {
+    SOLID_DATA buffer = (SOLID_DATA)_args;
+    do_patch_fd(buffer->fd.in, &buffer->out_len);
+    return SPATCH_DONE;
 }
 
 SOLID_RESULT zdelta_diff(void* _args) {    

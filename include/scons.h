@@ -41,13 +41,40 @@ extern "C" {
 #define CHUNK 40000
 #endif
 
-#define PIPE_SEG 1000000
+#define PIPE_SEG 50000
 
 extern char scompressor;
 extern char delta;
 extern char duplicator;
 
 typedef unsigned long int ulInt;
+
+/* 
+ * Add more as pluggins. 
+ * Make sure compressor is placed first 
+ * and decompressor is (100 + compressor) 
+ * Add cases in _s_init for custom added enums.
+ * 
+ */
+typedef enum {
+    
+    ZLIBC = 101, //Stream compressor
+    BZIPC = 102,
+    _7Z_C = 103,
+
+    ZLIBD = 201, //Stream de-compressor
+    BZIPD = 202,
+    _7Z_D = 203,
+    
+    ZDLTA = 301, // Delta compressor - diff
+    
+    ZDPAT = 401, // Delta compressor - patch
+    
+    LZDDP = 501, // Deduplicator 
+    
+    LZDUP = 601 // Duplicator
+} MODALGO;
+    
 
 typedef enum {
     S_NULL = 0,
@@ -84,7 +111,7 @@ typedef enum {
     STH_DONE = 602,
 } SOLID_RESULT;
 
-typedef SOLID_RESULT (*__stream__)(void *);
+typedef void * (*__stream__)(void *);
 typedef SOLID_RESULT (*__delta__)(void *);
 typedef SOLID_RESULT (*__dedup__)(void *);
 
@@ -110,6 +137,7 @@ typedef t_solid_data* SOLID_DATA;
 
 int write_buf(int fd, const void *buf, int size);
 int fill_buffer(SOLID_DATA buffer, size_t buf_len);
+int refill_buffer(SOLID_DATA buffer, size_t buf_len);
 
 extern unsigned long int netIn;
 extern unsigned long int netOut;

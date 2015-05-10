@@ -37,9 +37,11 @@ extern "C" {
 extern int level;
 extern char errorMsg[100];
 
-SOLID_RESULT zlib_compress(void* _args);
+void* zlib_compress(void* _args);
 SOLID_RESULT bzip2_compress(char *in_buffer, char **out_buffer, size_t in_len, size_t *out_len); // TODO: to be done bzip2
 SOLID_RESULT _7z_compress(char *in_buffer, char **out_buffer, size_t in_len, size_t *out_len); // TODO: to be done 7z
+
+void* zlib_decompress(void* _args);
 
 #ifdef __cplusplus
 }
