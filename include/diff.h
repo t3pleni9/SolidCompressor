@@ -80,7 +80,7 @@ typedef enum{
 #define DIFF_BLOCK 1000000
 #define DIFF_THLD 10
 #define MAX_INT 2000000
-typedef unsigned long uLong;
+
 
 
 SOLID_RESULT zdelta_diff(void* _args);

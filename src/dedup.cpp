@@ -267,6 +267,10 @@ void DeDup::duplicate(char *ddBuffer, char *buffer) {
 SOLID_RESULT de_dup(void* _args) {
     DeDup deDup;
     SOLID_DATA buffer = (SOLID_DATA) _args;
+    /*if(buffer->out_len) 
+       printf("Done dedup %d %d\n", buffer->in_len, buffer->out_len);
+    else 
+       printf("out len is null\n");*/
     return deDup.de_dup(buffer);
 }
         

@@ -47,14 +47,11 @@ extern char scompressor;
 extern char delta;
 extern char duplicator;
 
+typedef unsigned long int ulInt;
+
 typedef enum {
-    SPIPE_DONE = 1,
-    SPIPE_NOT_SET = 2,   
-    SPIPE_ERROR = 3,
-    SQU_DONE = 4,
-    SQU_ERROR = 5,
-    STH_ERROR = 6,
-    STH_DONE = 7,
+    S_NULL = 0,
+    S_DONE = 1,
     
     SDEDUP_DONE = 101,
     SDEDUP_ERROR = 102,
@@ -74,7 +71,17 @@ typedef enum {
     
     SPATCH_DONE = 205,
     SPATCH_NOT_DONE = 206,
-    SPATCH_ERROR = 207
+    SPATCH_ERROR = 207,
+    
+    SPIPE_DONE = 401,
+    SPIPE_NOT_SET = 402,   
+    SPIPE_ERROR = 403,
+    
+    SQU_DONE = 501,
+    SQU_ERROR = 502,
+    
+    STH_ERROR = 601,
+    STH_DONE = 602,
 } SOLID_RESULT;
 
 typedef SOLID_RESULT (*__stream__)(void *);
