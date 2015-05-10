@@ -341,8 +341,9 @@ static diff_result do_diff_fd(char *inBuffer, int out_fd, size_t inLen, size_t *
         return DIFF_DONE;        
 }
 
-SOLID_RESULT diff(SOLID_DATA buffer) {    
+SOLID_RESULT zdelta_diff(void* _args) {    
     diff_result diff;
+    SOLID_DATA buffer = (SOLID_DATA)_args;
     if(buffer->fd.out != -1) {
         diff = do_diff_fd(buffer->in_buffer, buffer->fd.out, buffer->in_len, &buffer->out_len);
     } else {

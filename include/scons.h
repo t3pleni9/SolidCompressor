@@ -44,6 +44,8 @@ extern "C" {
 #define PIPE_SEG 1000000
 
 extern char scompressor;
+extern char delta;
+extern char duplicator;
 
 typedef enum {
     SPIPE_DONE = 1,
@@ -75,7 +77,9 @@ typedef enum {
     SPATCH_ERROR = 207
 } SOLID_RESULT;
 
-typedef SOLID_RESULT (*__scomp__)(char *, char **, unsigned int, unsigned int*);
+typedef SOLID_RESULT (*__stream__)(void *);
+typedef SOLID_RESULT (*__delta__)(void *);
+typedef SOLID_RESULT (*__dedup__)(void *);
 
 typedef struct {
     int in;
@@ -88,8 +92,10 @@ typedef struct {
     char *out_buffer; // NULL buffer
     file_d fd;
     size_t in_len;
-    size_t out_len;  
-    __scomp__ scomp; // stream compressor
+    size_t out_len; 
+    __dedup__ dupcomp; // de-duplicator 
+    __delta__ dcomp; // delta compressor
+    __stream__ scomp; // stream compressor
     SOLID_RESULT end_result;
 }t_solid_data;
 

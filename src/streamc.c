@@ -27,7 +27,7 @@
 
 int level = Z_DEFAULT_COMPRESSION;
 
-SOLID_RESULT zlib_compress(char *in_buffer, char **out_buffer, size_t in_len, size_t *out_len) {
+static SOLID_RESULT _zlib_compress(char *in_buffer, char **out_buffer, size_t in_len, size_t *out_len) {
     char *temp_buffer = (char *)malloc(sizeof(char)*in_len);
     if(!temp_buffer) {
         strcpy(errorMsg, "Unable to allocate memory for temporary storage.");
@@ -37,7 +37,6 @@ SOLID_RESULT zlib_compress(char *in_buffer, char **out_buffer, size_t in_len, si
     int ret, flush, in_offset = 0;
     unsigned have;
     z_stream strm;
-    //unsigned char in[CHUNK];
     unsigned char out[CHUNK];
         
     *out_len = 0;
@@ -106,4 +105,14 @@ SOLID_RESULT zlib_compress(char *in_buffer, char **out_buffer, size_t in_len, si
         free(temp_buffer);
         
     return SSTRM_DONE;
+}
+
+SOLID_RESULT zlib_compress(void* _args) {
+    SOLID_DATA buffer = (SOLID_DATA)_args;
+    if((buffer->end_result = _zlib_compress(buffer->in_buffer, &buffer->out_buffer, 
+        buffer->in_len, &buffer->out_len)) != SSTRM_DONE) {
+        fprintf(stderr, "ERROR: Stream compress error - %s", errorMsg);
+        return buffer->end_result;
+    }   
+    return buffer->end_result;    
 }

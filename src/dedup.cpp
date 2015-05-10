@@ -263,4 +263,10 @@ void DeDup::duplicate(char *ddBuffer, char *buffer) {
         }     
     }
 }
+
+SOLID_RESULT de_dup(void* _args) {
+    DeDup deDup;
+    SOLID_DATA buffer = (SOLID_DATA) _args;
+    return deDup.de_dup(buffer);
+}
         

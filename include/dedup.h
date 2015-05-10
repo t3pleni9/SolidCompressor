@@ -86,6 +86,13 @@ class DeDup
         
 };
 
+extern "C" {
+#endif
+
+SOLID_RESULT de_dup(void* _args);
+
+#ifdef __cplusplus
+}
 #endif
 
 #endif /* DEDUP_H */ 

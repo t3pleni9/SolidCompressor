@@ -16,7 +16,7 @@ int main(int argc, char **argv) {
         inFile = fopen("/home/justin/compFile.t", "rb");
         outFile = fopen("/home/justin/compFile.t.out", "w");
         if(inFile) {
-            scompressor = 'z';
+            //_scompressor_ = 'z';
             //fread(buffer, SEG_S *sizeof(unsigned char), 1, inFile);
             solid_compress_fd(fileno(inFile), fileno(outFile));
             //solid_compress(buffer, outBuffer, SEG_S, &outLen);

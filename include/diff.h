@@ -83,7 +83,7 @@ typedef enum{
 typedef unsigned long uLong;
 
 
-SOLID_RESULT diff(SOLID_DATA buffer);
+SOLID_RESULT zdelta_diff(void* _args);
 
 diff_result do_patch(char *deltaBuffer, char *baseBuffer, char **patchBuffer, size_t deltaLen, size_t baseLen, size_t *patchLen);
 
