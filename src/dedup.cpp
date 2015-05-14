@@ -34,6 +34,8 @@
 #include <assert.h>
 #include <unistd.h>
 
+
+
 DeDup::DeDup()
 {
 	
@@ -210,11 +212,13 @@ unsigned long int DeDup::deDuplicate(char *buffer, char **outBuffer, unsigned lo
     return 0;
 }
 
-void DeDup::duplicate(char *ddBuffer, char *buffer) {
+SOLID_RESULT DeDup::duplicate(SOLID_DATA de_buffer) {
     
+    char *ddBuffer = de_buffer->out_buffer;
     char *inBuffer;
     Index temp;
     unsigned int offset = 0;
+    int ret = 0;
     char isC = 0;
     memcpy((char*)&isC, (ddBuffer + offset), sizeof(isC));
     offset += sizeof(isC);
@@ -230,8 +234,16 @@ void DeDup::duplicate(char *ddBuffer, char *buffer) {
     if (offset) {
         
         if(!isC) {
-            memcpy(buffer, (ddBuffer + offset), fileSize); 
-            return;
+            ret = write_buf(de_buffer->fd.out, ddBuffer + offset,  fileSize);
+            
+            if (ret < 0) {
+                close(de_buffer->fd.out);
+                strcpy(errorMsg,"DIFF: Unable to write buffer. ");
+                strcat(errorMsg, strerror(-ret));
+                return SPIPE_ERROR;
+            }
+            
+            return SDUP_DONE;
         }
             
                 
@@ -246,31 +258,75 @@ void DeDup::duplicate(char *ddBuffer, char *buffer) {
             int exists = Index::getIndexHeader(curPointer, &node);
             if(exists) {
                 if(node.type == 0 ) {
-                    memcpy((buffer + curPointer), (inBuffer + inBufPtr), node.size);
+                    //memcpy((buffer + curPointer), (inBuffer + inBufPtr), node.size);
+                    ret = write_buf(de_buffer->fd.out, (inBuffer + inBufPtr),  node.size);
+                    
+                    if (ret < 0) {
+                        close(de_buffer->fd.out);
+                        strcpy(errorMsg,"DUP: Unable to write buffer. ");
+                        strcat(errorMsg, strerror(-ret));
+                        return SPIPE_ERROR;
+                    }
                     curPointer += node.size;
                     inBufPtr += node.size;
                     
                 } else {
-                    memcpy((buffer + curPointer), (buffer + node.block), (node.size+1) * BLOCK_S);
+                    //memcpy((buffer + curPointer), (buffer + node.block), (node.size+1) * BLOCK_S);
+                    ret = write_buf(de_buffer->fd.out, (inBuffer + inBufPtr),  (node.size+1) * BLOCK_S);
+                    
+                    if (ret < 0) {
+                        close(de_buffer->fd.out);
+                        strcpy(errorMsg,"DUP: Unable to write buffer. ");
+                        strcat(errorMsg, strerror(-ret));
+                        return SPIPE_ERROR;
+                    }
                     curPointer += (node.size+1) * BLOCK_S;
                 }
             } else {
-                memcpy((buffer + curPointer), (inBuffer + inBufPtr), BLOCK_S);
+                //memcpy((buffer + curPointer), (inBuffer + inBufPtr), BLOCK_S);
+                ret = write_buf(de_buffer->fd.out, (inBuffer + inBufPtr),  BLOCK_S);
+
+                if (ret < 0) {
+                    close(de_buffer->fd.out);
+                    strcpy(errorMsg,"DUP: Unable to write buffer. ");
+                    strcat(errorMsg, strerror(-ret));
+                    return SPIPE_ERROR;
+                }
+                
                 curPointer += BLOCK_S;
                 inBufPtr += BLOCK_S;
                        
             }   
         }     
+        
+        if(inBuffer) delete[] inBuffer;
+       
+        return SDUP_DONE;        
     }
+    
+    return SDUP_NULL_POINTER;
 }
 
-SOLID_RESULT de_dup(void* _args) {
+void * de_dup(void* _args) {
     DeDup deDup;
     SOLID_DATA buffer = (SOLID_DATA) _args;
     /*if(buffer->out_len) 
        printf("Done dedup %d %d\n", buffer->in_len, buffer->out_len);
     else 
        printf("out len is null\n");*/
-    return deDup.de_dup(buffer);
+    buffer->end_result = deDup.de_dup(buffer);
+    return (void *)&buffer->end_result;
+}
+
+void *duplicate(void* _args) {
+    DeDup deDup;
+    SOLID_DATA buffer = (SOLID_DATA) _args;
+    /*if(buffer->out_len) 
+       printf("Done dedup %d %d\n", buffer->in_len, buffer->out_len);
+    else 
+       printf("out len is null\n");*/
+    buffer->end_result = deDup.duplicate(buffer);
+    printf("buffer return: %d\n", buffer->end_result);
+    pthread_exit(&buffer->end_result);
 }
         

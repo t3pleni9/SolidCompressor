@@ -72,7 +72,7 @@ class DeDup
         DeDup();
         virtual ~DeDup();
         SOLID_RESULT de_dup(SOLID_DATA buffer);
-        void duplicate(char*, char*);
+        SOLID_RESULT duplicate(SOLID_DATA de_buffer);
         void clearDictionary();
     
     private:				
@@ -89,7 +89,9 @@ class DeDup
 extern "C" {
 #endif
 
-SOLID_RESULT de_dup(void* _args);
+void * de_dup(void* _args);
+void * duplicate(void* _args);
+extern char errorMsg[100];
 
 #ifdef __cplusplus
 }

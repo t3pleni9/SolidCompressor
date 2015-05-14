@@ -71,7 +71,7 @@ static SOLID_RESULT _zlib_compress(int fd_in, int fd_out) {
                 (void)deflateEnd(&strm);
                 return SPIPE_ERROR;
             }
-            netOut += have;
+            
         } while (strm.avail_out == 0);
         assert(strm.avail_in == 0);     /* all input will be used */
 

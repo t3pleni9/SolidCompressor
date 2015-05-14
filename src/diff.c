@@ -245,8 +245,6 @@ static diff_result do_diff_fd(char *inBuffer, int out_fd, size_t inLen, size_t *
             return DIFF_NULL_POINTER;
         }
         
-        
-        
         node_array = (NODEDP)malloc(((inLen > blockCount * DIFF_BLOCK)?blockCount + 1 : blockCount) * sizeof(NODESP));
         int ret = 0, node_len;
         char *node_buffer = NULL;
@@ -332,7 +330,7 @@ static diff_result do_diff_fd(char *inBuffer, int out_fd, size_t inLen, size_t *
                     done[j]->bit = 0;     
                     
                     /* Debugger part*/
-                     fprintf(stderr, "i = %d j = %d %d %d\n", i, j, blockCount, node_array[j]->node_size);               
+                     printf("i = %d j = %d %d %d\n", i, j, blockCount, node_array[j]->node_size);               
                      
                 } else {
                     
@@ -346,7 +344,8 @@ static diff_result do_diff_fd(char *inBuffer, int out_fd, size_t inLen, size_t *
             _node_t node;
             node.ref_node = -1;
             node.node_size = inLen - blockCount * DIFF_BLOCK;
-            node.data = (char *)malloc(DIFF_BLOCK * sizeof(char));
+            node.data = (char *)malloc(node.node_size * sizeof(char));
+            memcpy(node.data, (inBuffer + i*DIFF_BLOCK) ,node.node_size);
             *out_len += (node.node_size + sizeof(int) + sizeof(size_t));
             blockCount++;
             if((node_len = flatten_node_buffer(node, &node_buffer)) != -1) {                
@@ -378,11 +377,11 @@ static int recreate_delta(NODEDP node_array, SOLID_DATA buffer, int node_count) 
         
         NODESP temp_node = (NODESP)malloc(sizeof(_node_t));
         printf("d_len = %d %d\n",node_array[node_count - 1]->node_size,node->ref_node);
-        ///*ERROR:*/memcpy(ref_node, node_array[node->ref_node]->data, DIFF_BLOCK);
         
         _do_patch(node->data, node_array[node->ref_node]->data, 
         &temp_node->data, node->node_size, DIFF_BLOCK, &temp_node->node_size);
         node_array[node_count - 1] = temp_node;
+        free(node);
        
         i++;
         printf("d_len = %d\n",  node_array[node_count - 1]->node_size);
@@ -391,25 +390,81 @@ static int recreate_delta(NODEDP node_array, SOLID_DATA buffer, int node_count) 
 }
 
 static diff_result do_patch_fd(SOLID_DATA buffer) {
+    
+    pthread_t t_dup;
     buffer->in_buffer = (char *)malloc(PATCH_BLOCK);
     size_t temp_out_len = 0;
     buffer->in_len = 0;
     buffer->out_len = 0;
     int node_count = 0;
+    int ret = 0;
     NODEDP node_array = (NODEDP)malloc(MAX_DIFF_BLOCK*sizeof(NODESP));
+    int first_run = 1;
+    SOLID_RESULT retResult;
     while(1) {
         //buffer.out_len = 0;
         printf("node count: %d\n", node_count);
         int readed = refill_buffer(buffer, PATCH_BLOCK);
         printf("ret %d %d %d\n", readed, buffer->in_len, temp_out_len);
-        if(readed <= 0)
+        if(readed == 0) {
+            if(!first_run) {                        
+                if((retResult = wait_for_finish(t_dup)) != SDUP_DONE) {
+                    fprintf(stderr, "ERROR: Duplicator thread not done\n");
+                    //retResult = STH_ERROR;
+                    //clean up 
+                    exit(-1); // remove to return clauses.
+                }                        
+            }
+            
+            buffer->out_len = (node_count > 1 ? ((node_count-2)* DIFF_BLOCK + node_array[node_count-1]->node_size) 
+                : node_array[node_count-1]->node_size);
+            printf("final node len : %d\n", buffer->out_len);
+            if(buffer->out_buffer) free(buffer->out_buffer);
+            buffer->out_buffer = (char *) malloc(buffer->out_len);
+            int i = 0; 
+            int offset = 0;
+            while(i < node_count) {
+                if(node_array[i]->data) {
+                    memcpy((buffer->out_buffer + offset), node_array[i]->data, node_array[i]->node_size);
+                    offset += node_array[i]->node_size;
+                    free(node_array[i]);
+                }
+                
+                i++;
+            }
+            
+            
+            
+            ret = pthread_create(&t_dup, NULL, buffer->dupcomp, buffer);                
+            if (ret) {
+                ret = -ret;
+                fprintf(stderr, "ERROR: thread setup failed: %s\n",
+                    strerror(-ret));
+                //retResult = STH_ERROR;
+                //clean up 
+                exit(-1); // remove to return clauses.
+            }
+            
+            if(!first_run) {                        
+                if((retResult = wait_for_finish(t_dup)) != SDUP_DONE) {
+                    fprintf(stderr, "ERROR: Duplicator thread not done\n");
+                    //retResult = STH_ERROR;
+                    //clean up 
+                    exit(-1); // remove to return clauses.
+                }                        
+            }
+            close(buffer->fd.out);
             break;
+        } else if(readed < 0) {
+            //TODO: clean up
+            exit(-1); // remove to return clauses.
+        }
         
         node_array[node_count++] = build_node_buffer(buffer->in_buffer, &temp_out_len);
         
         printf("%d %d %d %d\n", node_array[node_count-1]->node_size, node_array[node_count-1]->ref_node, buffer->in_len,  temp_out_len );
         
-        int ret = recreate_delta(node_array, buffer, node_count);
+        ret = recreate_delta(node_array, buffer, node_count);
         printf("%d %d %d %d\n", node_array[node_count-1]->node_size, node_array[node_count-1]->ref_node, buffer->in_len,  temp_out_len );
         if(ret == -1) {
             
@@ -417,14 +472,61 @@ static diff_result do_patch_fd(SOLID_DATA buffer) {
             temp_out_len = 0;
         } else if(ret == -2) {
             fprintf(stderr, "Undefined ref node\n");
-            exit(-1);
+            //TODO: clean up
+            exit(-1); // remove to return clauses.
         } else {
-            if(node_array[node_count-1]->node_size != DIFF_BLOCK && node_array[node_count-1]->ref_node == -1) {
-                printf("Stupid shit\n");
-                node_count = 1;
-                // copy to out buffer
+            if(node_count <= 0) {
+                fprintf(stderr, "Undefined ref node\n");
+                //TODO: clean up
+                exit(-1); // remove to return clauses.
             }
-            memcpy((char *)&node_array[node_count-1]->node_size, (buffer->in_buffer + temp_out_len + sizeof(node_array[node_count-1]->node_size)), sizeof(node_array[node_count-1]->node_size));
+            
+            if(node_array[node_count-1]->node_size != DIFF_BLOCK && node_array[node_count-1]->ref_node == -1) {
+                
+                if(!first_run) {                        
+                    if((retResult = wait_for_finish(t_dup)) != SDUP_DONE) {
+                        fprintf(stderr, "ERROR: Duplicator thread not done\n");
+                        //retResult = STH_ERROR;
+                        //clean up 
+                        exit(-1); // remove to return clauses.
+                    }                        
+                }
+                
+                buffer->out_len = (node_count > 1 ? ((node_count-2)* DIFF_BLOCK + node_array[node_count-1]->node_size) 
+                    : node_array[node_count-1]->node_size);
+                if(buffer->out_buffer) free(buffer->out_buffer);
+                buffer->out_buffer = (char *) malloc(buffer->out_len);
+                int i = 0; 
+                int offset = 0;
+                while(i < node_count) {
+                    if(node_array[i]->data) {
+                        memcpy((buffer->out_buffer + offset), node_array[i]->data, node_array[i]->node_size);
+                        offset += node_array[i]->node_size;
+                        free(node_array[i]);
+                    }
+                    
+                    i++;
+                }
+                
+                
+                
+                ret = pthread_create(&t_dup, NULL, buffer->dupcomp, buffer);                
+                if (ret) {
+                    ret = -ret;
+                    fprintf(stderr, "ERROR: thread setup failed: %s\n",
+                        strerror(-ret));
+                    //retResult = STH_ERROR;
+                    //clean up 
+                    exit(-1); // remove to return clauses.
+                }
+                
+                first_run = 0;
+                
+                node_count = 1;
+            }
+            memcpy((char *)&node_array[node_count-1]->node_size, 
+                (buffer->in_buffer + temp_out_len + sizeof(node_array[node_count-1]->node_size)), 
+                sizeof(node_array[node_count-1]->node_size));
             char *temp = (char *)malloc(PATCH_BLOCK - temp_out_len);
             memcpy(temp, (buffer->in_buffer + temp_out_len), PATCH_BLOCK - temp_out_len);
             memset(buffer->in_buffer, 0, PATCH_BLOCK);

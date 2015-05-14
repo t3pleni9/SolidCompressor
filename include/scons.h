@@ -24,6 +24,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <pthread.h>
  
 #ifndef __SCONS_H
 #define __SCONS_H
@@ -48,6 +49,8 @@ extern char delta;
 extern char duplicator;
 
 typedef unsigned long int ulInt;
+
+
 
 /* 
  * Add more as pluggins. 
@@ -113,7 +116,7 @@ typedef enum {
 
 typedef void * (*__stream__)(void *);
 typedef SOLID_RESULT (*__delta__)(void *);
-typedef SOLID_RESULT (*__dedup__)(void *);
+typedef void * (*__dedup__)(void *);
 
 typedef struct {
     int in;
@@ -138,6 +141,8 @@ typedef t_solid_data* SOLID_DATA;
 int write_buf(int fd, const void *buf, int size);
 int fill_buffer(SOLID_DATA buffer, size_t buf_len);
 int refill_buffer(SOLID_DATA buffer, size_t buf_len);
+SOLID_RESULT wait_for_finish(pthread_t t_th);
+
 
 extern unsigned long int netIn;
 extern unsigned long int netOut;

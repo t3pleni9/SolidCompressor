@@ -38,9 +38,11 @@ MODALGO _scompressor_  = ZLIBC;
 MODALGO _delta_        = ZDLTA;
 MODALGO _duplicator_   = LZDDP;
 
+extern int dfd;
+extern int ifd;
 
 static void printStats() {
-    char in[10], out[10];
+    /*char in[10], out[10];
     ulInt sizes[] = {1, 1000, 1000000, 1000000000 };
     char post[5] = {"BKMG"};
     int i = 0;
@@ -63,9 +65,9 @@ static void printStats() {
         }
     } else {
         sprintf(in, "%luB", netOut);
-    }
+    }*/
     
-    fprintf(stderr, "Net IN: %s Net OUT: %s\n", in, out);
+    fprintf(stderr, "Net IN: %lu Net OUT: %lu\n", netIn, netOut);
 }
 
 static SOLID_RESULT _set_header(int out_fd) {
@@ -137,6 +139,8 @@ static void * _s_init(SOLID_DATA *buffer) {
     switch(_duplicator_) {
         case LZDDP: (*buffer)->dupcomp = (de_dup);
         break;
+        case LZDUP: (*buffer)->dupcomp = (duplicate);
+        break;
         default : (*buffer)->dupcomp = (de_dup);
     }
     
@@ -160,23 +164,7 @@ static void * _s_init(SOLID_DATA *buffer) {
     printf("InB: %s Len: %d OutB: %s Len: %d Id: %d FdIn: %d FdOut: %d\n", node2.in_buffer, node2.in_len, node2.out_buffer, node2.out_len, node2.id, node2.fd.in, node2.fd.out);
 }*/
 
-SOLID_RESULT wait_for_finish(pthread_t t_th) {
-    void* t_res = NULL;
-    int ret     = pthread_join(t_th, &t_res );
-    if (ret) {
-        ret = -ret;
-        fprintf(stderr, "ERROR: pthread_join failed: %s\n",
-            strerror(-ret));
-        return STH_ERROR;
-    } 
-          
-    if (t_res ) {
-        SOLID_RESULT retResult = *(SOLID_RESULT *)t_res ;
-        return retResult;
-    }
-       
-    return STH_DONE;
-}
+
 
 void *diff_pipe(void *_args) {    
     SOLID_DATA buffer = (SOLID_DATA)_args;    
@@ -217,7 +205,7 @@ SOLID_RESULT _solid_compress_fd(int in_fd, int out_fd) {
     while(1) {
         de_dup_buffer->in_buffer = (char *) malloc(SEG_S);
         int readed = fill_buffer(de_dup_buffer, SEG_S);
-        netIn += de_dup_buffer->in_len;
+
         if( readed < 0) {
             fprintf(stderr, "Error: failed to read stream");
             return SPIPE_ERROR;
@@ -234,7 +222,7 @@ SOLID_RESULT _solid_compress_fd(int in_fd, int out_fd) {
             goto out;             
         } else {
             de_dup_buffer->out_buffer = NULL;
-            if((de_dup_buffer->dupcomp)(de_dup_buffer) == SDEDUP_DONE) {
+            if(*((SOLID_RESULT *)(de_dup_buffer->dupcomp)(de_dup_buffer)) == SDEDUP_DONE) {
                 if(!first_run) {                        
                     if((retResult = wait_for_finish(t_diff)) != SDIFF_DONE) {
                         fprintf(stderr, "ERROR: Diff thread not done\n");
@@ -285,6 +273,8 @@ SOLID_RESULT _solid_compress_fd(int in_fd, int out_fd) {
 }
 
 SOLID_RESULT solid_compress_fd(int in_fd, int dump_fd) {
+    dfd = dump_fd;
+    ifd = in_fd;
     int pipefd[2]   = {-1, -1};
     pthread_t t_diff;
     SOLID_DATA buffer;
@@ -334,6 +324,8 @@ SOLID_RESULT solid_compress_fd(int in_fd, int dump_fd) {
 }
 
 SOLID_RESULT solid_de_compress_fd(int in_fd, int out_fd) {
+     dfd = out_fd;
+    ifd = in_fd;
     int pipefd[2]   = {-1, -1};
     pthread_t t_diff;
     SOLID_DATA buffer;
@@ -362,6 +354,7 @@ SOLID_RESULT solid_de_compress_fd(int in_fd, int out_fd) {
     buffer->fd.out  = pipefd[1];
     
     diff_buffer->fd.in = pipefd[0];
+    diff_buffer->fd.out = out_fd;
     
     
     
@@ -376,24 +369,20 @@ SOLID_RESULT solid_de_compress_fd(int in_fd, int out_fd) {
     
     (buffer->dcomp)(diff_buffer);
     
-    /*
-     * For dedup and delta, keep a common buffer, (aka reader writter, diff is
-     * writer, whereas dedup is reader. Write out dedup output to dump_fd. no storage required.
-     */
-    
     /*if((retResult = _solid_compress_fd(in_fd, pipefd[1])) != S_DONE) {
         fprintf(stderr, "ERROR: Main compression thread not done\n");
         goto out;
-    }
+    }*/
+    
     if((retResult = wait_for_finish(t_diff)) != SSTRM_DONE) {
         fprintf(stderr, "ERROR: Stream compress thread not done\n");
         goto out;
     }
-    */
     out:
     free(buffer);
     if (pipefd[0] != -1)
         close(pipefd[0]); 
+    printStats();
     return retResult;
 
 }

@@ -12,6 +12,8 @@ extern "C" {
 #endif
 
 char errorMsg[100];
+int dfd = 0;
+int ifd = 0;
 
 extern int write_buf(int fd, const void *buf, int size) {
 	int ret;
@@ -35,20 +37,27 @@ extern int write_buf(int fd, const void *buf, int size) {
     
 	ret = 0;
     out:
+        if(fd == dfd) 
+            netOut += size;
+            //fprintf(stderr, "AMT: %d\n", pos);
         return pos;
 }
 
 extern int refill_buffer(SOLID_DATA buffer, size_t buf_len) {
     int readed = 0;
-    do {
+    while(buffer->in_len < buf_len){
         readed = read( buffer->fd.in, (buffer->in_buffer + buffer->in_len), buf_len - buffer->in_len);
         if(readed <= 0) {
+            if(buffer->fd.in == ifd) 
+                netIn += buffer->in_len;
             return readed;
         } else {
             buffer->in_len += readed;
         }
-    } while(buffer->in_len < buf_len);
+    }
     
+    if(buffer->fd.in == ifd) 
+        netIn += buffer->in_len;
     return readed;
 
 }
@@ -68,6 +77,24 @@ extern int fill_buffer(SOLID_DATA buffer, size_t buf_len) {
     */
     return readed;
 
+}
+
+extern SOLID_RESULT wait_for_finish(pthread_t t_th) {
+    void* t_res = NULL;
+    int ret     = pthread_join(t_th, &t_res );
+    if (ret) {
+        ret = -ret;
+        fprintf(stderr, "ERROR: pthread_join failed: %s\n",
+            strerror(-ret));
+        return STH_ERROR;
+    } 
+          
+    if (t_res ) {
+        SOLID_RESULT retResult = *(SOLID_RESULT *)t_res ;
+        return retResult;
+    }
+       
+    return STH_DONE;
 }
 
 
