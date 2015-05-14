@@ -233,9 +233,21 @@ static diff_result do_diff(char *inBuffer, char **outBuffer, size_t inLen, size_
 static diff_result do_diff_fd(char *inBuffer, int out_fd, size_t inLen, size_t *out_len) {
         time_t t;
         srand((unsigned) time(&t));
-        unsigned int blockCount = inLen / DIFF_BLOCK, i, j;
         char **fuzzy_hash_result;
-        _node_t node_array;
+        unsigned int blockCount = inLen / DIFF_BLOCK, i, j;
+        NODEDP node_array;
+
+        size_t deltaLen = 0;
+        if(out_len) {
+            *out_len = 0;
+        } else {
+            perror("Out length not declared");
+            return DIFF_NULL_POINTER;
+        }
+        
+        
+        
+        node_array = (NODEDP)malloc(((inLen > blockCount * DIFF_BLOCK)?blockCount + 1 : blockCount) * sizeof(NODESP));
         int ret = 0, node_len;
         char *node_buffer = NULL;
         
@@ -249,23 +261,45 @@ static diff_result do_diff_fd(char *inBuffer, int out_fd, size_t inLen, size_t *
         bit_feild **done = (bit_feild **)malloc(blockCount * sizeof(bit_feild *));
         fuzzy_hash_result = (char **)malloc(((inLen > blockCount * DIFF_BLOCK)?
             blockCount + 1 : blockCount) * sizeof(char *));
+        
         for(i = 0; i < blockCount ; i++) {
             done[i] = (bit_feild *)malloc(sizeof(bit_feild));
             done[i]->bit = 1;
+            node_array[i] = (NODESP)malloc(sizeof(_node_t));
             fuzzy_hash_result[i] = (char *)malloc(FUZZY_MAX_RESULT);
             fuzzy_hash_buf((const unsigned char *)(inBuffer + i*DIFF_BLOCK), DIFF_BLOCK, fuzzy_hash_result[i]);
         }
        
         for(i = 0; i < blockCount; i++) {     
             
-            if(!done[i]->bit)
+            if(!done[i]->bit) {
+                if(!node_array[i]->data) {
+                    strcpy(errorMsg,"DIFF: Unable to set delta");
+                    close(out_fd);
+                    return DIFF_NOT_DONE;
+                }
+                if((node_len = flatten_node_buffer(*(node_array[i]), &node_buffer)) != -1) {                
+                    ret = write_buf(out_fd, node_buffer, node_len);
+                    if (ret < 0) {
+                        close(out_fd);
+                        strcpy(errorMsg,"DIFF: Unable to write buffer. ");
+                        strcat(errorMsg, strerror(-ret));
+                        return DIFF_PIPE_ERROR;
+                    }
+                    
+                    free(node_buffer);
+                    free(node_array[i]->data);
+                    free(node_array[i]);
+                }
                 continue;
-            node_array.ref_node = -1;
-            node_array.node_size = DIFF_BLOCK;
-            node_array.data = (char *)malloc(DIFF_BLOCK * sizeof(char));
-            *out_len += (node_array.node_size + sizeof(int) + sizeof(size_t));
-            memcpy(node_array.data, (inBuffer + i*DIFF_BLOCK), DIFF_BLOCK);
-            if((node_len = flatten_node_buffer(node_array, &node_buffer)) != -1) {                
+            }
+            
+            node_array[i]->ref_node = -1;
+            node_array[i]->node_size = DIFF_BLOCK;
+            node_array[i]->data = (char *)malloc(DIFF_BLOCK * sizeof(char));
+            *out_len += (node_array[i]->node_size + sizeof(int) + sizeof(size_t));
+            memcpy(node_array[i]->data, (inBuffer + i*DIFF_BLOCK), DIFF_BLOCK);
+            if((node_len = flatten_node_buffer(*(node_array[i]), &node_buffer)) != -1) {                
                 ret = write_buf(out_fd, node_buffer, node_len);
                 if (ret < 0) {
                     close(out_fd);
@@ -275,7 +309,8 @@ static diff_result do_diff_fd(char *inBuffer, int out_fd, size_t inLen, size_t *
                 }
                 
                 free(node_buffer);
-                free(node_array.data);
+                free(node_array[i]->data);
+                free(node_array[i]);
             }
             //int inc = (rand() % 9) + 2;
             for(j = i+1; j < blockCount ; j++) {
@@ -284,34 +319,21 @@ static diff_result do_diff_fd(char *inBuffer, int out_fd, size_t inLen, size_t *
                 int sim = 0;
                 sim = fuzzy_compare(fuzzy_hash_result[i],fuzzy_hash_result[j]);
                 if( sim >= DIFF_THLD) {
-                    _do_diff((const unsigned char *)(inBuffer + j*DIFF_BLOCK), (const unsigned char *)(inBuffer + i*DIFF_BLOCK), &node_array.data, DIFF_BLOCK, DIFF_BLOCK, &node_array.node_size);               
+                    _do_diff((const unsigned char *)(inBuffer + j*DIFF_BLOCK), (const unsigned char *)(inBuffer + i*DIFF_BLOCK), &node_array[j]->data, DIFF_BLOCK, DIFF_BLOCK, &node_array[j]->node_size);               
+                    NODESP temp_node = (NODESP)malloc(sizeof(_node_t));
+                    _do_patch((node_array[j]->data), (inBuffer + i*DIFF_BLOCK), 
+                    &temp_node->data, node_array[j]->node_size, DIFF_BLOCK, &temp_node->node_size);
+        
+                    node_array[j]->ref_node = i;
+                   // *out_len += (node_array[i]->node_size + sizeof(int) + sizeof(size_t));
                     
-                    node_array.ref_node = i;
-                    *out_len += (node_array.node_size + sizeof(int) + sizeof(size_t));
                     
-                    if(!node_array.data) {
-                        strcpy(errorMsg,"DIFF: Unable to set delta");
-                        close(out_fd);
-                        return DIFF_NOT_DONE;
-                    }
-                    if((node_len = flatten_node_buffer(node_array, &node_buffer)) != -1) {                
-                        ret = write_buf(out_fd, node_buffer, node_len);
-                        if (ret < 0) {
-                            close(out_fd);
-                            strcpy(errorMsg,"DIFF: Unable to write buffer. ");
-                            strcat(errorMsg, strerror(-ret));
-                            return DIFF_PIPE_ERROR;
-                        }
-                        
-                        free(node_buffer);
-                        free(node_array.data);
-                    }
                     
                     done[j]->bit = 0;     
                     
-                    /* Debugger part
-                     *  fprintf(stderr, "i = %d j = %d %d\n", i, j, blockCount);               
-                     */
+                    /* Debugger part*/
+                     fprintf(stderr, "i = %d j = %d %d %d\n", i, j, blockCount, node_array[j]->node_size);               
+                     
                 } else {
                     
                 }
@@ -321,12 +343,13 @@ static diff_result do_diff_fd(char *inBuffer, int out_fd, size_t inLen, size_t *
         }
         
         if(inLen > blockCount * DIFF_BLOCK) {
-            node_array.ref_node = -1;
-            node_array.node_size = inLen - blockCount * DIFF_BLOCK;
-            node_array.data = (char *)malloc(DIFF_BLOCK * sizeof(char));
-            *out_len += (node_array.node_size + sizeof(int) + sizeof(size_t));
+            _node_t node;
+            node.ref_node = -1;
+            node.node_size = inLen - blockCount * DIFF_BLOCK;
+            node.data = (char *)malloc(DIFF_BLOCK * sizeof(char));
+            *out_len += (node.node_size + sizeof(int) + sizeof(size_t));
             blockCount++;
-            if((node_len = flatten_node_buffer(node_array, &node_buffer)) != -1) {                
+            if((node_len = flatten_node_buffer(node, &node_buffer)) != -1) {                
                 ret = write_buf(out_fd, node_buffer, node_len);
                 if (ret < 0) {
                     close(out_fd);
@@ -336,7 +359,7 @@ static diff_result do_diff_fd(char *inBuffer, int out_fd, size_t inLen, size_t *
                 }
                               
                 free(node_buffer);
-                free(node_array.data);
+                free(node.data);
             }
         }
         
@@ -344,49 +367,85 @@ static diff_result do_diff_fd(char *inBuffer, int out_fd, size_t inLen, size_t *
         return DIFF_DONE;        
 }
 
-static diff_result do_patch_fd(int in_fd, size_t *out_len) {
-    t_solid_data buffer;
-    buffer.in_buffer = (char *)malloc(PATCH_BLOCK);
-    buffer.fd.in = in_fd;
-    buffer.out_len = 0;
-    buffer.in_len = 0;
+static int recreate_delta(NODEDP node_array, SOLID_DATA buffer, int node_count) {
+    static int i = 0;
+    //printf("i = %d\n", i);
+    NODESP node = node_array[node_count - 1];
+    if(node->ref_node == -1){
+        return node->node_size == DIFF_BLOCK ? -1 : 0 ;
+    } else {
+        if(node->ref_node >= node_count)    return -2;
+        
+        NODESP temp_node = (NODESP)malloc(sizeof(_node_t));
+        printf("d_len = %d %d\n",node_array[node_count - 1]->node_size,node->ref_node);
+        ///*ERROR:*/memcpy(ref_node, node_array[node->ref_node]->data, DIFF_BLOCK);
+        
+        _do_patch(node->data, node_array[node->ref_node]->data, 
+        &temp_node->data, node->node_size, DIFF_BLOCK, &temp_node->node_size);
+        node_array[node_count - 1] = temp_node;
+       
+        i++;
+        printf("d_len = %d\n",  node_array[node_count - 1]->node_size);
+        return 1;
+    }
+}
+
+static diff_result do_patch_fd(SOLID_DATA buffer) {
+    buffer->in_buffer = (char *)malloc(PATCH_BLOCK);
+    size_t temp_out_len = 0;
+    buffer->in_len = 0;
+    buffer->out_len = 0;
+    int node_count = 0;
+    NODEDP node_array = (NODEDP)malloc(MAX_DIFF_BLOCK*sizeof(NODESP));
     while(1) {
         //buffer.out_len = 0;
-        int ret = refill_buffer(&buffer, PATCH_BLOCK);
-        printf("ret %d %d %d\n", ret, buffer.in_len, buffer.out_len);
-        if(ret < 0)
+        printf("node count: %d\n", node_count);
+        int readed = refill_buffer(buffer, PATCH_BLOCK);
+        printf("ret %d %d %d\n", readed, buffer->in_len, temp_out_len);
+        if(readed <= 0)
             break;
         
-        NODESP node = build_node_buffer(buffer.in_buffer, &buffer.out_len);
-        printf("%d %d %d %d\n", node->node_size, node->ref_node, buffer.in_len, buffer.out_len);
-        if(node->ref_node == -1 && node->node_size == DIFF_BLOCK) {
-            buffer.in_len = 0;
-            buffer.out_len = 0;
+        node_array[node_count++] = build_node_buffer(buffer->in_buffer, &temp_out_len);
+        
+        printf("%d %d %d %d\n", node_array[node_count-1]->node_size, node_array[node_count-1]->ref_node, buffer->in_len,  temp_out_len );
+        
+        int ret = recreate_delta(node_array, buffer, node_count);
+        printf("%d %d %d %d\n", node_array[node_count-1]->node_size, node_array[node_count-1]->ref_node, buffer->in_len,  temp_out_len );
+        if(ret == -1) {
+            
+            buffer->in_len = 0;
+            temp_out_len = 0;
+        } else if(ret == -2) {
+            fprintf(stderr, "Undefined ref node\n");
+            exit(-1);
         } else {
-            if(node->node_size != DIFF_BLOCK && node->ref_node == -1)
+            if(node_array[node_count-1]->node_size != DIFF_BLOCK && node_array[node_count-1]->ref_node == -1) {
                 printf("Stupid shit\n");
-            memcpy((char *)&node->node_size, (buffer.in_buffer + buffer.out_len + sizeof(node->node_size)), sizeof(node->node_size));
-            char *temp = (char *)malloc(PATCH_BLOCK - buffer.out_len);
-            memcpy(temp, (buffer.in_buffer + buffer.out_len), PATCH_BLOCK - buffer.out_len);
-            memset(buffer.in_buffer, 0, PATCH_BLOCK);
-            memcpy(buffer.in_buffer, temp, PATCH_BLOCK - buffer.out_len);
-            buffer.in_len = PATCH_BLOCK - buffer.out_len;
+                node_count = 1;
+                // copy to out buffer
+            }
+            memcpy((char *)&node_array[node_count-1]->node_size, (buffer->in_buffer + temp_out_len + sizeof(node_array[node_count-1]->node_size)), sizeof(node_array[node_count-1]->node_size));
+            char *temp = (char *)malloc(PATCH_BLOCK - temp_out_len);
+            memcpy(temp, (buffer->in_buffer + temp_out_len), PATCH_BLOCK - temp_out_len);
+            memset(buffer->in_buffer, 0, PATCH_BLOCK);
+            memcpy(buffer->in_buffer, temp, PATCH_BLOCK - temp_out_len);
+            buffer->in_len = PATCH_BLOCK - temp_out_len;
             
             free(temp);
-            memcpy((char *)&node->node_size, (buffer.in_buffer + sizeof(node->node_size)), sizeof(node->node_size));
-            buffer.out_len = 0;
+            temp_out_len = 0;
+            
+            if(!ret) node_count = 0;
             
         }
-        free(node);
+        //free(node);
         
-        if(ret == 0)
-            break;
+       
     }
 }
 
 SOLID_RESULT zdelta_patch(void* _args) {
     SOLID_DATA buffer = (SOLID_DATA)_args;
-    do_patch_fd(buffer->fd.in, &buffer->out_len);
+    do_patch_fd(buffer);
     return SPATCH_DONE;
 }
 
