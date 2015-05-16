@@ -44,7 +44,7 @@ static NODESP build_node_buffer(char *node_buffer, int *_offset_) {
     if(memcpy((char *)&node->node_size, (node_buffer + offset), sizeof(node->node_size)) == NULL) {
         return NULL;
     }
-    printf("here %d\n", node->ref_node);
+    //printf("here %d\n", node->ref_node);
     node->data = (char *)malloc(node->node_size);
     if(!node->data)
         return NULL;
@@ -232,11 +232,12 @@ static diff_result do_diff(char *inBuffer, char **outBuffer, size_t inLen, size_
 //TODO: Free every malloc buffers on error conditions.
 static diff_result do_diff_fd(char *inBuffer, int out_fd, size_t inLen, size_t *out_len) {
         time_t t;
+        
         srand((unsigned) time(&t));
         char **fuzzy_hash_result;
         unsigned int blockCount = inLen / DIFF_BLOCK, i, j;
         NODEDP node_array;
-
+        printf("inLen : %ld %d %d\n", inLen, inLen/DIFF_BLOCK, blockCount);
         size_t deltaLen = 0;
         if(out_len) {
             *out_len = 0;
@@ -276,6 +277,7 @@ static diff_result do_diff_fd(char *inBuffer, int out_fd, size_t inLen, size_t *
                     close(out_fd);
                     return DIFF_NOT_DONE;
                 }
+                printf("ref Node: %d i %d\n", node_array[i]->ref_node, i);
                 if((node_len = flatten_node_buffer(*(node_array[i]), &node_buffer)) != -1) {                
                     ret = write_buf(out_fd, node_buffer, node_len);
                     if (ret < 0) {
@@ -297,7 +299,10 @@ static diff_result do_diff_fd(char *inBuffer, int out_fd, size_t inLen, size_t *
             node_array[i]->data = (char *)malloc(DIFF_BLOCK * sizeof(char));
             *out_len += (node_array[i]->node_size + sizeof(int) + sizeof(size_t));
             memcpy(node_array[i]->data, (inBuffer + i*DIFF_BLOCK), DIFF_BLOCK);
-            if((node_len = flatten_node_buffer(*(node_array[i]), &node_buffer)) != -1) {                
+            //printf("ref Node: %d i %d\n", node_array[i]->ref_node, i);
+                
+            if((node_len = flatten_node_buffer(*(node_array[i]), &node_buffer)) != -1) {    
+                printf("index: %d\n", i);            
                 ret = write_buf(out_fd, node_buffer, node_len);
                 if (ret < 0) {
                     close(out_fd);
@@ -330,7 +335,7 @@ static diff_result do_diff_fd(char *inBuffer, int out_fd, size_t inLen, size_t *
                     done[j]->bit = 0;     
                     
                     /* Debugger part*/
-                     printf("i = %d j = %d %d %d\n", i, j, blockCount, node_array[j]->node_size);               
+                    // printf("i = %d j = %d %d %d\n", i, j, blockCount, node_array[j]->node_size);               
                      
                 } else {
                     
@@ -344,12 +349,14 @@ static diff_result do_diff_fd(char *inBuffer, int out_fd, size_t inLen, size_t *
             _node_t node;
             node.ref_node = -1;
             node.node_size = inLen - blockCount * DIFF_BLOCK;
+            
             node.data = (char *)malloc(node.node_size * sizeof(char));
             memcpy(node.data, (inBuffer + i*DIFF_BLOCK) ,node.node_size);
             *out_len += (node.node_size + sizeof(int) + sizeof(size_t));
             blockCount++;
             if((node_len = flatten_node_buffer(node, &node_buffer)) != -1) {                
                 ret = write_buf(out_fd, node_buffer, node_len);
+                printf("node size: %d %d %d\n", node.node_size, blockCount, node_len);
                 if (ret < 0) {
                     close(out_fd);
                     strcpy(errorMsg,"DIFF: Unable to write buffer. ");
@@ -376,7 +383,7 @@ static int recreate_delta(NODEDP node_array, SOLID_DATA buffer, int node_count) 
         if(node->ref_node >= node_count)    return -2;
         
         NODESP temp_node = (NODESP)malloc(sizeof(_node_t));
-        printf("d_len = %d %d\n",node_array[node_count - 1]->node_size,node->ref_node);
+        //printf("d_len = %d %d\n",node_array[node_count - 1]->node_size,node->ref_node);
         
         _do_patch(node->data, node_array[node->ref_node]->data, 
         &temp_node->data, node->node_size, DIFF_BLOCK, &temp_node->node_size);
@@ -384,7 +391,7 @@ static int recreate_delta(NODEDP node_array, SOLID_DATA buffer, int node_count) 
         free(node);
        
         i++;
-        printf("d_len = %d\n",  node_array[node_count - 1]->node_size);
+        //printf("d_len = %d\n",  node_array[node_count - 1]->node_size);
         return 1;
     }
 }
@@ -403,9 +410,9 @@ static diff_result do_patch_fd(SOLID_DATA buffer) {
     SOLID_RESULT retResult;
     while(1) {
         //buffer.out_len = 0;
-        printf("node count: %d\n", node_count);
+       // printf("node count: %d\n", node_count);
         int readed = refill_buffer(buffer, PATCH_BLOCK);
-        printf("ret %d %d %d\n", readed, buffer->in_len, temp_out_len);
+       // printf("ret %d %d %d\n", readed, buffer->in_len, temp_out_len);
         if(readed == 0) {
             if(!first_run) {                        
                 if((retResult = wait_for_finish(t_dup)) != SDUP_DONE) {
@@ -416,9 +423,29 @@ static diff_result do_patch_fd(SOLID_DATA buffer) {
                 }                        
             }
             
-            buffer->out_len = (node_count > 1 ? ((node_count-2)* DIFF_BLOCK + node_array[node_count-1]->node_size) 
+            node_array[node_count] = build_node_buffer(buffer->in_buffer, &temp_out_len);
+            printf("node count: %d\n", node_count);
+            node_count++;
+        
+        //printf("%d %d %d %d\n", node_array[node_count-1]->node_size, node_array[node_count-1]->ref_node, buffer->in_len,  temp_out_len );
+        
+            ret = recreate_delta(node_array, buffer, node_count);
+            if(ret == 0)
+                printf("NODE SIZE: %d %d\n", node_count - 1, node_array[node_count-1]->node_size);
+        //printf("%d %d %d %d\n", node_array[node_count-1]->node_size, node_array[node_count-1]->ref_node, buffer->in_len,  temp_out_len );
+            if(ret == -1) {
+                
+                buffer->in_len = 0;
+                temp_out_len = 0;
+            } else if(ret == -2) {
+                fprintf(stderr, "Undefined ref node\n");
+                //TODO: clean up
+                exit(-1); // remove to return clauses.
+            }
+            
+            buffer->out_len = (node_count > 1 ? ((node_count-1)* DIFF_BLOCK + node_array[node_count-1]->node_size) 
                 : node_array[node_count-1]->node_size);
-            printf("final node len : %d\n", buffer->out_len);
+            //printf("final node len : %d\n", buffer->out_len)
             if(buffer->out_buffer) free(buffer->out_buffer);
             buffer->out_buffer = (char *) malloc(buffer->out_len);
             int i = 0; 
@@ -433,7 +460,7 @@ static diff_result do_patch_fd(SOLID_DATA buffer) {
                 i++;
             }
             
-            
+            printf("Offset size : %d\n", offset);
             
             ret = pthread_create(&t_dup, NULL, buffer->dupcomp, buffer);                
             if (ret) {
@@ -453,6 +480,7 @@ static diff_result do_patch_fd(SOLID_DATA buffer) {
                     exit(-1); // remove to return clauses.
                 }                        
             }
+            sleep(10);
             close(buffer->fd.out);
             break;
         } else if(readed < 0) {
@@ -460,12 +488,13 @@ static diff_result do_patch_fd(SOLID_DATA buffer) {
             exit(-1); // remove to return clauses.
         }
         
-        node_array[node_count++] = build_node_buffer(buffer->in_buffer, &temp_out_len);
-        
-        printf("%d %d %d %d\n", node_array[node_count-1]->node_size, node_array[node_count-1]->ref_node, buffer->in_len,  temp_out_len );
+        node_array[node_count] = build_node_buffer(buffer->in_buffer, &temp_out_len);
+        printf("node count: %d\n", node_count);
+        node_count++;
+        //printf("%d %d %d %d\n", node_array[node_count-1]->node_size, node_array[node_count-1]->ref_node, buffer->in_len,  temp_out_len );
         
         ret = recreate_delta(node_array, buffer, node_count);
-        printf("%d %d %d %d\n", node_array[node_count-1]->node_size, node_array[node_count-1]->ref_node, buffer->in_len,  temp_out_len );
+        //printf("%d %d %d %d\n", node_array[node_count-1]->node_size, node_array[node_count-1]->ref_node, buffer->in_len,  temp_out_len );
         if(ret == -1) {
             
             buffer->in_len = 0;
@@ -480,7 +509,8 @@ static diff_result do_patch_fd(SOLID_DATA buffer) {
                 //TODO: clean up
                 exit(-1); // remove to return clauses.
             }
-            
+            if(ret == 0)
+                printf("NODE SIZE: %d %d\n", node_count - 1, node_array[node_count-1]->node_size);
             if(node_array[node_count-1]->node_size != DIFF_BLOCK && node_array[node_count-1]->ref_node == -1) {
                 
                 if(!first_run) {                        
@@ -492,7 +522,7 @@ static diff_result do_patch_fd(SOLID_DATA buffer) {
                     }                        
                 }
                 
-                buffer->out_len = (node_count > 1 ? ((node_count-2)* DIFF_BLOCK + node_array[node_count-1]->node_size) 
+                buffer->out_len = (node_count > 1 ? ((node_count-1)* DIFF_BLOCK + node_array[node_count-1]->node_size) 
                     : node_array[node_count-1]->node_size);
                 if(buffer->out_buffer) free(buffer->out_buffer);
                 buffer->out_buffer = (char *) malloc(buffer->out_len);
@@ -507,7 +537,7 @@ static diff_result do_patch_fd(SOLID_DATA buffer) {
                     
                     i++;
                 }
-                
+                printf("Offset size : %d\n", offset);
                 
                 
                 ret = pthread_create(&t_dup, NULL, buffer->dupcomp, buffer);                
@@ -524,9 +554,9 @@ static diff_result do_patch_fd(SOLID_DATA buffer) {
                 
                 node_count = 1;
             }
-            memcpy((char *)&node_array[node_count-1]->node_size, 
+            /*memcpy((char *)&node_array[node_count-1]->node_size, 
                 (buffer->in_buffer + temp_out_len + sizeof(node_array[node_count-1]->node_size)), 
-                sizeof(node_array[node_count-1]->node_size));
+                sizeof(node_array[node_count-1]->node_size));*/
             char *temp = (char *)malloc(PATCH_BLOCK - temp_out_len);
             memcpy(temp, (buffer->in_buffer + temp_out_len), PATCH_BLOCK - temp_out_len);
             memset(buffer->in_buffer, 0, PATCH_BLOCK);

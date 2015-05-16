@@ -76,7 +76,7 @@ typedef enum{
 } diff_result;
 
 #define DIFF_BLOCK 1000000
-#define MAX_DIFF_BLOCK (SEG_S / DIFF_BLOCK)
+#define MAX_DIFF_BLOCK ((SEG_S / DIFF_BLOCK) + 10)
 #define PATCH_BLOCK (DIFF_BLOCK + sizeof(int) + sizeof(size_t))
 #define DIFF_THLD 10
 #define MAX_INT 2000000

@@ -159,6 +159,9 @@ unsigned long int DeDup::deDuplicate(char *buffer, char **outBuffer, unsigned lo
                                                 
                     } else {
                         //Generate Index
+                        //fwrite((buffer + curPointer),1, 50, stderr);
+                        //fprintf(stderr, "\n"); 
+                        std::cout<<node.getParentIndex().block<<" " <<node.getParentIndex().size<<std::endl;
                         Index::generateIndex(node.getParentIndex(),node.getIndexNode().offsetPointer, 1, 0);
                         exists = false;
                      }
@@ -214,8 +217,10 @@ unsigned long int DeDup::deDuplicate(char *buffer, char **outBuffer, unsigned lo
 
 SOLID_RESULT DeDup::duplicate(SOLID_DATA de_buffer) {
     
+    printf("outLen : %ld\n", de_buffer->out_len);
     char *ddBuffer = de_buffer->out_buffer;
     char *inBuffer;
+    char *buffer = (char *)malloc(SEG_S);
     Index temp;
     unsigned int offset = 0;
     int ret = 0;
@@ -254,44 +259,24 @@ SOLID_RESULT DeDup::duplicate(SOLID_DATA de_buffer) {
         unsigned long int curPointer = 0;
         unsigned long int inBufPtr = 0;
         IndexHeader node;
-        while(curPointer <= SEG_S) {
+        while(curPointer < SEG_S) {
             int exists = Index::getIndexHeader(curPointer, &node);
             if(exists) {
                 if(node.type == 0 ) {
-                    //memcpy((buffer + curPointer), (inBuffer + inBufPtr), node.size);
-                    ret = write_buf(de_buffer->fd.out, (inBuffer + inBufPtr),  node.size);
-                    
-                    if (ret < 0) {
-                        close(de_buffer->fd.out);
-                        strcpy(errorMsg,"DUP: Unable to write buffer. ");
-                        strcat(errorMsg, strerror(-ret));
-                        return SPIPE_ERROR;
-                    }
+                    memcpy((buffer + curPointer), (inBuffer + inBufPtr), node.size);
                     curPointer += node.size;
                     inBufPtr += node.size;
                     
                 } else {
-                    //memcpy((buffer + curPointer), (buffer + node.block), (node.size+1) * BLOCK_S);
-                    ret = write_buf(de_buffer->fd.out, (inBuffer + inBufPtr),  (node.size+1) * BLOCK_S);
+                    //fwrite((buffer + node.block),1, 50, stderr);
+                    //fprintf(stderr, "\n"); 
+                    std::cout<<node.block<<" "<<node.size<<std::endl;
                     
-                    if (ret < 0) {
-                        close(de_buffer->fd.out);
-                        strcpy(errorMsg,"DUP: Unable to write buffer. ");
-                        strcat(errorMsg, strerror(-ret));
-                        return SPIPE_ERROR;
-                    }
+                    memcpy((buffer + curPointer), (buffer + node.block), (node.size+1) * BLOCK_S);
                     curPointer += (node.size+1) * BLOCK_S;
                 }
             } else {
-                //memcpy((buffer + curPointer), (inBuffer + inBufPtr), BLOCK_S);
-                ret = write_buf(de_buffer->fd.out, (inBuffer + inBufPtr),  BLOCK_S);
-
-                if (ret < 0) {
-                    close(de_buffer->fd.out);
-                    strcpy(errorMsg,"DUP: Unable to write buffer. ");
-                    strcat(errorMsg, strerror(-ret));
-                    return SPIPE_ERROR;
-                }
+                memcpy((buffer + curPointer), (inBuffer + inBufPtr), BLOCK_S);
                 
                 curPointer += BLOCK_S;
                 inBufPtr += BLOCK_S;
@@ -299,6 +284,18 @@ SOLID_RESULT DeDup::duplicate(SOLID_DATA de_buffer) {
             }   
         }     
         
+        ret = write_buf(de_buffer->fd.out, buffer,  curPointer);
+            
+        if (ret < 0) {
+            close(de_buffer->fd.out);
+            strcpy(errorMsg,"DIFF: Unable to write buffer. ");
+            strcat(errorMsg, strerror(-ret));
+            return SPIPE_ERROR;
+        }
+        
+        printf("or: %ld cur: %ld %ld \n", fileSize, curPointer, inBufPtr);
+        
+        if(buffer) delete[] buffer;
         if(inBuffer) delete[] inBuffer;
        
         return SDUP_DONE;        
