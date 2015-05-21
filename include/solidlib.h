@@ -36,6 +36,7 @@ extern char errorMsg[100];
 SOLID_RESULT solid_compress(char* inbuffer, char *outbuffer, size_t in_len, size_t * out_len);
 SOLID_RESULT solid_compress_fd(int in_fd, int dump_fd);
 SOLID_RESULT solid_de_compress_fd(int in_fd, int out_fd);
+void *solid_de_comp_thread(void *args_);
 
 #ifdef __cplusplus
 }

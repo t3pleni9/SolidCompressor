@@ -75,7 +75,7 @@ typedef enum{
     DIFF_PIPE_IO_NULL = 9
 } diff_result;
 
-#define DIFF_BLOCK 1000000
+#define DIFF_BLOCK 50000
 #define MAX_DIFF_BLOCK ((SEG_S / DIFF_BLOCK) + 10)
 #define PATCH_BLOCK (DIFF_BLOCK + sizeof(int) + sizeof(size_t))
 #define DIFF_THLD 10

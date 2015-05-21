@@ -108,10 +108,15 @@ int Index::writeIndex(char* index) {
         offset += sizeof(IndexHeader);
         size++;
     }
+    
     Index::headerIndex.clear();
     memcpy((index), (char*)&size, sizeof(unsigned int));
     //0: Error, nonzero: no Error
     return (offset + intSize);
+}
+
+void Index::clearIndex() {
+	Index::headerIndex.clear();
 }
 
 int Index::readIndex(char* index) {

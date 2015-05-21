@@ -97,7 +97,8 @@ int DeDup::deDuplicateSubBlocks(char* buffer, int curPointer, int inc, long unsi
 } 
 
 unsigned long int DeDup::deDuplicate(char *buffer, char **outBuffer, unsigned long int seg_s ) {
-    
+    static int blocCount = 0;
+    blocCount++;
     unsigned int blockCounter = 1;
     bool exists = false;    
     const int inc = BLOCK_S / BLOCK_X;
@@ -161,7 +162,7 @@ unsigned long int DeDup::deDuplicate(char *buffer, char **outBuffer, unsigned lo
                         //Generate Index
                         //fwrite((buffer + curPointer),1, 50, stderr);
                         //fprintf(stderr, "\n"); 
-                        std::cout<<node.getParentIndex().block<<" " <<node.getParentIndex().size<<std::endl;
+                        //std::cout<<node.getParentIndex().block<<" " <<node.getParentIndex().size<<std::endl;
                         Index::generateIndex(node.getParentIndex(),node.getIndexNode().offsetPointer, 1, 0);
                         exists = false;
                      }
@@ -182,7 +183,8 @@ unsigned long int DeDup::deDuplicate(char *buffer, char **outBuffer, unsigned lo
         indexOffset = 0;
         char c = 0;
         c = (fileSize >= seg_s ? 0 : 1);
-        
+        if(blocCount == 4)
+        	Index::printIndex();
         // Setting size for outbuffer.
         unsigned long int retSize = sizeof(c) + (c ? ((Index::getHeaderIndexCount() * sizeof(IndexHeader)) + 
             sizeof(unsigned int)) : 0)  + sizeof(unsigned long int) + (c ? fileSize : seg_s);
@@ -201,7 +203,7 @@ unsigned long int DeDup::deDuplicate(char *buffer, char **outBuffer, unsigned lo
           
             
         //Copying size into the buffer
-        memcpy(((*outBuffer) + indexOffset), (char*)&(c ? fileSize : seg_s), sizeof(unsigned long int));
+        memcpy(((*outBuffer) + indexOffset), (char*)&(seg_s), sizeof(unsigned long int));
         indexOffset += sizeof(unsigned long int);
         
         //Copy compressed data into buffer
@@ -216,8 +218,9 @@ unsigned long int DeDup::deDuplicate(char *buffer, char **outBuffer, unsigned lo
 }
 
 SOLID_RESULT DeDup::duplicate(SOLID_DATA de_buffer) {
-    
-    printf("outLen : %ld\n", de_buffer->out_len);
+    static int blocCount = 0;
+    blocCount++;
+   // printf("outLen : %ld\n", de_buffer->out_len);
     char *ddBuffer = de_buffer->out_buffer;
     char *inBuffer;
     char *buffer = (char *)malloc(SEG_S);
@@ -229,9 +232,13 @@ SOLID_RESULT DeDup::duplicate(SOLID_DATA de_buffer) {
     offset += sizeof(isC);
     if(isC) {
         offset += Index::readIndex(ddBuffer);
+        if(blocCount == 4)
+        	Index::printIndex();
+        	
     }
     
     unsigned long int fileSize = 0;
+    
     
     memcpy((char*)&fileSize, (ddBuffer + offset), sizeof(unsigned long int));
     offset += sizeof(unsigned long int);    
@@ -252,32 +259,42 @@ SOLID_RESULT DeDup::duplicate(SOLID_DATA de_buffer) {
         }
             
                 
-        inBuffer = new char[fileSize];
+        inBuffer = (ddBuffer + offset);
         
-        memcpy(inBuffer, (ddBuffer + offset), fileSize);     
+        //memcpy(inBuffer, (ddBuffer + offset), fileSize);     
            
         unsigned long int curPointer = 0;
         unsigned long int inBufPtr = 0;
         IndexHeader node;
-        while(curPointer < SEG_S) {
+        int counter = 0;
+        while(curPointer < fileSize) {
+        	counter++;
             int exists = Index::getIndexHeader(curPointer, &node);
             if(exists) {
                 if(node.type == 0 ) {
+                	fprintf(stdout, "starting if copy %ld %ld %ld\n",node.size, inBufPtr, curPointer);
                     memcpy((buffer + curPointer), (inBuffer + inBufPtr), node.size);
                     curPointer += node.size;
                     inBufPtr += node.size;
+                    fprintf(stdout, "This copy done\n");
                     
                 } else {
                     //fwrite((buffer + node.block),1, 50, stderr);
                     //fprintf(stderr, "\n"); 
-                    std::cout<<node.block<<" "<<node.size<<std::endl;
-                    
+                    //std::cout<<node.block<<" "<<node.size<<std::endl;
+                    fprintf(stdout, "starting else copy %ld %ld %ld\n", (node.size+1) * BLOCK_S, inBufPtr, curPointer);
                     memcpy((buffer + curPointer), (buffer + node.block), (node.size+1) * BLOCK_S);
                     curPointer += (node.size+1) * BLOCK_S;
+                    fprintf(stdout, "else copy done\n");
                 }
             } else {
-                memcpy((buffer + curPointer), (inBuffer + inBufPtr), BLOCK_S);
-                
+            	
+            	//fprintf(stdout, "starting big else copy %ld %ld %ld\n", fileSize, inBufPtr, curPointer);
+            	char *tempBuffer = (char *)malloc(BLOCK_S);
+            	memcpy(tempBuffer, (inBuffer + inBufPtr), BLOCK_S);
+                //fprintf(stdout, "big else copy done\n");            	
+                memcpy((buffer + curPointer), tempBuffer, BLOCK_S);
+				free(tempBuffer);
                 curPointer += BLOCK_S;
                 inBufPtr += BLOCK_S;
                        
@@ -293,10 +310,11 @@ SOLID_RESULT DeDup::duplicate(SOLID_DATA de_buffer) {
             return SPIPE_ERROR;
         }
         
-        printf("or: %ld cur: %ld %ld \n", fileSize, curPointer, inBufPtr);
+        fprintf(stderr,"or: %ld cur: %ld %ld \n", fileSize, curPointer, inBufPtr);
         
         if(buffer) delete[] buffer;
-        if(inBuffer) delete[] inBuffer;
+        //if(inBuffer) delete[] inBuffer;
+        Index::clearIndex();
        
         return SDUP_DONE;        
     }
@@ -307,23 +325,24 @@ SOLID_RESULT DeDup::duplicate(SOLID_DATA de_buffer) {
 void * de_dup(void* _args) {
     DeDup deDup;
     SOLID_DATA buffer = (SOLID_DATA) _args;
-    /*if(buffer->out_len) 
-       printf("Done dedup %d %d\n", buffer->in_len, buffer->out_len);
-    else 
-       printf("out len is null\n");*/
+    
     buffer->end_result = deDup.de_dup(buffer);
+    if(buffer->out_len) 
+       fprintf(stderr, "Done dedup %d %d\n", buffer->in_len, buffer->out_len);
+    else 
+       fprintf(stderr,"out len is null\n");
     return (void *)&buffer->end_result;
 }
 
 void *duplicate(void* _args) {
     DeDup deDup;
     SOLID_DATA buffer = (SOLID_DATA) _args;
-    /*if(buffer->out_len) 
-       printf("Done dedup %d %d\n", buffer->in_len, buffer->out_len);
-    else 
-       printf("out len is null\n");*/
+    
     buffer->end_result = deDup.duplicate(buffer);
-    printf("buffer return: %d\n", buffer->end_result);
+    if(buffer->out_len) 
+       fprintf(stderr, "Done dedup %d %d\n", buffer->in_len, buffer->out_len);
+    else 
+       fprintf(stderr, "out len is null\n");
     pthread_exit(&buffer->end_result);
 }
         

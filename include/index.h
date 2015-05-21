@@ -96,6 +96,7 @@ class Index{
         static int getIndexHeader(unsigned int, IndexHeader*);
         static int getHeaderIndexCount();
         static void printIndex();
+        static void clearIndex();
 };
 
 #endif

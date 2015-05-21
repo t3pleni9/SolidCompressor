@@ -324,7 +324,7 @@ SOLID_RESULT solid_compress_fd(int in_fd, int dump_fd) {
 }
 
 SOLID_RESULT solid_de_compress_fd(int in_fd, int out_fd) {
-     dfd = out_fd;
+    dfd = out_fd;
     ifd = in_fd;
     int pipefd[2]   = {-1, -1};
     pthread_t t_diff;
@@ -381,11 +381,22 @@ SOLID_RESULT solid_de_compress_fd(int in_fd, int out_fd) {
     out:
     free(buffer);
     if (pipefd[0] != -1)
-        close(pipefd[0]); 
+        close(pipefd[0]);
+    close(out_fd); 
     printStats();
     return retResult;
 
 }
+
+void *solid_de_comp_thread(void *args_) {
+	file_d *fd = (file_d *)args_;
+	SOLID_DATA buffer;
+	_s_init(&buffer);
+	buffer->end_result = solid_de_compress_fd(fd->in, fd->out);
+	close(fd->out);
+	pthread_exit(&buffer->end_result);
+}
+	
 
 /*
  * solid_de_compress_fd(....) {

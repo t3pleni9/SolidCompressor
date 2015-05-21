@@ -5,8 +5,8 @@ MKSLDIR = mkdir -p $(SLDIR)
 CC = gcc
 CXX = g++
 DBGFLAGS = -pg
-CFLAGS = -fPIC -Wall -I$(IDIR) -L$(LDIR)
-CXXFLAGS = $(DBGFLAGS) $(CFLAGS) -std=c++11 -fpic
+CFLAGS = -fPIC -Wall -I$(IDIR) -L$(LDIR)  -D_FILE_OFFSET_BITS=64 
+CXXFLAGS = $(DBGFLAGS) $(CFLAGS) -std=c++11 -fpic  -D_FILE_OFFSET_BITS=64 
 
 ODIR = ./obj
 MKODIR = mkdir -p $(ODIR)
