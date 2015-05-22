@@ -62,10 +62,7 @@ SOLID_RESULT DeDup::de_dup(SOLID_DATA buffer) {
 }
 
 bool DeDup::nodeExists(std::string hashValue) {
-     
-    //std::unordered_map<std::string,IndexNode>::const_iterator got = strgIndex.find (hashValue);
-    //std::cout<<"Does Not:"<<(strgIndex.find (hashValue) == strgIndex.end())<<std::endl;
-    return !(strgIndex.find (hashValue) == strgIndex.end());
+     return !(strgIndex.find (hashValue) == strgIndex.end());
 }
 
 void DeDup::clearDictionary() {
@@ -97,8 +94,6 @@ int DeDup::deDuplicateSubBlocks(char* buffer, int curPointer, int inc, long unsi
 } 
 
 unsigned long int DeDup::deDuplicate(char *buffer, char **outBuffer, unsigned long int seg_s ) {
-    static int blocCount = 0;
-    blocCount++;
     unsigned int blockCounter = 1;
     bool exists = false;    
     const int inc = BLOCK_S / BLOCK_X;
@@ -110,8 +105,7 @@ unsigned long int DeDup::deDuplicate(char *buffer, char **outBuffer, unsigned lo
     unsigned long int fileSize = 0;
     
     if (tempBuff) {        
-        while(segLength > 0) {
-            
+        while(segLength > 0) {            
             if(BLOCK_S < segLength) {
                 if(!exists) {
                     bufferSize = deDuplicateSubBlocks(buffer, curPointer, inc, &segLength);
@@ -160,9 +154,6 @@ unsigned long int DeDup::deDuplicate(char *buffer, char **outBuffer, unsigned lo
                                                 
                     } else {
                         //Generate Index
-                        //fwrite((buffer + curPointer),1, 50, stderr);
-                        //fprintf(stderr, "\n"); 
-                        //std::cout<<node.getParentIndex().block<<" " <<node.getParentIndex().size<<std::endl;
                         Index::generateIndex(node.getParentIndex(),node.getIndexNode().offsetPointer, 1, 0);
                         exists = false;
                      }
@@ -183,9 +174,7 @@ unsigned long int DeDup::deDuplicate(char *buffer, char **outBuffer, unsigned lo
         indexOffset = 0;
         char c = 0;
         c = (fileSize >= seg_s ? 0 : 1);
-        if(blocCount == 4)
-        	Index::printIndex();
-        // Setting size for outbuffer.
+       	// Setting size for outbuffer.
         unsigned long int retSize = sizeof(c) + (c ? ((Index::getHeaderIndexCount() * sizeof(IndexHeader)) + 
             sizeof(unsigned int)) : 0)  + sizeof(unsigned long int) + (c ? fileSize : seg_s);
         
@@ -208,9 +197,7 @@ unsigned long int DeDup::deDuplicate(char *buffer, char **outBuffer, unsigned lo
         
         //Copy compressed data into buffer
         memcpy(((*outBuffer) + indexOffset), (c ? tempBuff : buffer), (c ? fileSize : seg_s));
-        //std::cout<<strgIndex.size()<<" "<<indexOffset<<" "<<fileSize<<std::endl; 
         delete[] tempBuff;
-        //printf("RET: %ld S+indOFf: %ld\n", retSize, ((c ? fileSize : seg_s) + indexOffset));
         return retSize == ((c ? fileSize : seg_s) + indexOffset) ? retSize : 0;
     }
     
@@ -218,9 +205,6 @@ unsigned long int DeDup::deDuplicate(char *buffer, char **outBuffer, unsigned lo
 }
 
 SOLID_RESULT DeDup::duplicate(SOLID_DATA de_buffer) {
-    static int blocCount = 0;
-    blocCount++;
-   // printf("outLen : %ld\n", de_buffer->out_len);
     char *ddBuffer = de_buffer->out_buffer;
     char *inBuffer;
     char *buffer = (char *)malloc(SEG_S);
@@ -232,9 +216,6 @@ SOLID_RESULT DeDup::duplicate(SOLID_DATA de_buffer) {
     offset += sizeof(isC);
     if(isC) {
         offset += Index::readIndex(ddBuffer);
-        if(blocCount == 4)
-        	Index::printIndex();
-        	
     }
     
     unsigned long int fileSize = 0;
@@ -261,8 +242,6 @@ SOLID_RESULT DeDup::duplicate(SOLID_DATA de_buffer) {
                 
         inBuffer = (ddBuffer + offset);
         
-        //memcpy(inBuffer, (ddBuffer + offset), fileSize);     
-           
         unsigned long int curPointer = 0;
         unsigned long int inBufPtr = 0;
         IndexHeader node;
@@ -272,32 +251,18 @@ SOLID_RESULT DeDup::duplicate(SOLID_DATA de_buffer) {
             int exists = Index::getIndexHeader(curPointer, &node);
             if(exists) {
                 if(node.type == 0 ) {
-                	fprintf(stdout, "starting if copy %ld %ld %ld\n",node.size, inBufPtr, curPointer);
-                    memcpy((buffer + curPointer), (inBuffer + inBufPtr), node.size);
+                	memcpy((buffer + curPointer), (inBuffer + inBufPtr), node.size);
                     curPointer += node.size;
-                    inBufPtr += node.size;
-                    fprintf(stdout, "This copy done\n");
+                    inBufPtr += node.size;                    
                     
                 } else {
-                    //fwrite((buffer + node.block),1, 50, stderr);
-                    //fprintf(stderr, "\n"); 
-                    //std::cout<<node.block<<" "<<node.size<<std::endl;
-                    fprintf(stdout, "starting else copy %ld %ld %ld\n", (node.size+1) * BLOCK_S, inBufPtr, curPointer);
                     memcpy((buffer + curPointer), (buffer + node.block), (node.size+1) * BLOCK_S);
-                    curPointer += (node.size+1) * BLOCK_S;
-                    fprintf(stdout, "else copy done\n");
+                    curPointer += (node.size+1) * BLOCK_S;                    
                 }
             } else {
-            	
-            	//fprintf(stdout, "starting big else copy %ld %ld %ld\n", fileSize, inBufPtr, curPointer);
-            	char *tempBuffer = (char *)malloc(BLOCK_S);
-            	memcpy(tempBuffer, (inBuffer + inBufPtr), BLOCK_S);
-                //fprintf(stdout, "big else copy done\n");            	
-                memcpy((buffer + curPointer), tempBuffer, BLOCK_S);
-				free(tempBuffer);
+            	memcpy((buffer + curPointer), (inBuffer + inBufPtr), BLOCK_S);
                 curPointer += BLOCK_S;
-                inBufPtr += BLOCK_S;
-                       
+                inBufPtr += BLOCK_S;                       
             }   
         }     
         
@@ -310,10 +275,7 @@ SOLID_RESULT DeDup::duplicate(SOLID_DATA de_buffer) {
             return SPIPE_ERROR;
         }
         
-        fprintf(stderr,"or: %ld cur: %ld %ld \n", fileSize, curPointer, inBufPtr);
-        
         if(buffer) delete[] buffer;
-        //if(inBuffer) delete[] inBuffer;
         Index::clearIndex();
        
         return SDUP_DONE;        
@@ -323,14 +285,16 @@ SOLID_RESULT DeDup::duplicate(SOLID_DATA de_buffer) {
 }
 
 void * de_dup(void* _args) {
+    static int i = 0;
+    fprintf(stderr, "%d\n", i++);
     DeDup deDup;
     SOLID_DATA buffer = (SOLID_DATA) _args;
     
     buffer->end_result = deDup.de_dup(buffer);
-    if(buffer->out_len) 
+    /*if(buffer->out_len) 
        fprintf(stderr, "Done dedup %d %d\n", buffer->in_len, buffer->out_len);
     else 
-       fprintf(stderr,"out len is null\n");
+       fprintf(stderr,"out len is null\n");*/
     return (void *)&buffer->end_result;
 }
 
@@ -339,10 +303,10 @@ void *duplicate(void* _args) {
     SOLID_DATA buffer = (SOLID_DATA) _args;
     
     buffer->end_result = deDup.duplicate(buffer);
-    if(buffer->out_len) 
+    /*if(buffer->out_len) 
        fprintf(stderr, "Done dedup %d %d\n", buffer->in_len, buffer->out_len);
     else 
-       fprintf(stderr, "out len is null\n");
+       fprintf(stderr, "out len is null\n");*/
     pthread_exit(&buffer->end_result);
 }
         

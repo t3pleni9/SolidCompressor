@@ -39,7 +39,7 @@ extern "C" {
 #endif
 
 #ifndef CHUNK
-#define CHUNK 40000
+#define CHUNK 3800
 #endif
 
 #define PIPE_SEG 50000

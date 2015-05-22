@@ -82,7 +82,6 @@ typedef enum{
 #define MAX_INT 2000000
 
 
-
 SOLID_RESULT zdelta_diff(void* _args);
 SOLID_RESULT zdelta_patch(void* _args);
 
