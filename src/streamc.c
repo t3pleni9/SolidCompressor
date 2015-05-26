@@ -57,13 +57,13 @@ static SOLID_RESULT _zlib_compress(int fd_in, int fd_out) {
             return SSTRM_ERROR;
         }*/
         flush = !read ? Z_FINISH : Z_NO_FLUSH;
-        strm.next_in = buffer.in_buffer;
+        strm.next_in = (unsigned char*)buffer.in_buffer;
 
         /* run deflate() on input until output buffer not full, finish
            compression if all of source has been read in */
         do {
             strm.avail_out = CHUNK;
-            strm.next_out = buffer.out_buffer;
+            strm.next_out = (unsigned char *)buffer.out_buffer;
             ret = deflate(&strm, flush);    /* no bad return value */
             assert(ret != Z_STREAM_ERROR);  /* state not clobbered */
             have = CHUNK - strm.avail_out;
@@ -111,12 +111,12 @@ static SOLID_RESULT _zlib_decompress(int fd_in, int fd_out) {
         
         if (strm.avail_in == 0)
             break;
-        strm.next_in = buffer.in_buffer;
+        strm.next_in = (unsigned char *)buffer.in_buffer;
 
         /* run inflate() on input until output buffer not full */
         do {
             strm.avail_out = CHUNK;
-            strm.next_out = buffer.out_buffer;
+            strm.next_out = (unsigned char *)buffer.out_buffer;
             ret = inflate(&strm, Z_NO_FLUSH);
             assert(ret != Z_STREAM_ERROR);  /* state not clobbered */
             switch (ret) {

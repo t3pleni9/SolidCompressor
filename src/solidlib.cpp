@@ -35,7 +35,7 @@ ulInt netIn         = 0;
 ulInt netOut        = 0;
 
 MODALGO _scompressor_  = ZLIBC;
-MODALGO _delta_        = ZDLTA;
+MODALGO _delta_        = ZMSTD;
 MODALGO _duplicator_   = LZDDP;
 
 extern int dfd;
@@ -131,9 +131,13 @@ static void * _s_init(SOLID_DATA *buffer) {
     switch(_delta_) {
         case ZDLTA: (*buffer)->dcomp = (zdelta_diff);
         break;
+        case ZMSTD: (*buffer)->dcomp = (zmst_diff);
+        break;
         case ZDPAT: (*buffer)->dcomp = (zdelta_patch);
         break;
-        default : (*buffer)->dcomp = (zdelta_diff);
+        case ZMSTP: (*buffer)->dcomp = (zdelta_patch);
+        break;
+        default : (*buffer)->dcomp = (zmst_diff);
     }
     
     switch(_duplicator_) {

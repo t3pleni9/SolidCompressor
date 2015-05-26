@@ -70,8 +70,10 @@ typedef enum {
     _7Z_D = 203,
     
     ZDLTA = 301, // Delta compressor - diff
+    ZMSTD = 302,
     
     ZDPAT = 401, // Delta compressor - patch
+    ZMSTP = 402,
     
     LZDDP = 501, // Deduplicator 
     

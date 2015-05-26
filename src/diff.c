@@ -24,7 +24,23 @@
 
 #include "diff.h"
 
+typedef struct t_min_ds{
+    int start;
+    int end;
+    int size;
+    NODESP node_array;
+} min_ds;
 
+typedef min_ds* MPTR;
+
+typedef struct t_looper {
+    min_ds mXn;    
+    int i_val;
+    char *buffer;
+    bit_feild *done;
+} looper;
+
+typedef looper* LPTR;
 
 
 static NODESP build_node_buffer(char *node_buffer, size_t *_offset_) {
@@ -88,22 +104,6 @@ static int flatten_node_buffer(_node_t node, char **node_buffer) {
     return offset;    
 }
 
-static int create_delta_buffer(NODEDP nodes, size_t block_count, char *out_buffer) {
-    int i, node_len, offset = 0;
-    char *node_buffer = NULL;
-    for(i = 0; i< block_count; i++) {
-        if((node_len = flatten_node_buffer(*(nodes[i]), &node_buffer)) != -1) {                
-            memcpy((out_buffer + offset), node_buffer, node_len);
-            offset += node_len;              
-            free(node_buffer);
-        } else {
-            return 0;
-        }
-    }
-    
-    return 1;
-}
-
 static diff_result _do_diff(const unsigned char *inBuffer, const unsigned char *baseBuffer, char **deltaBuffer,size_t inLen, size_t baseLen, size_t *outLen) {
 
     Bytef *delta = NULL;
@@ -140,104 +140,53 @@ static diff_result _do_patch(char *deltaBuffer, char *baseBuffer, char **patchBu
     return PATCH_DONE;
 }
 
-static diff_result do_diff(char *inBuffer, char **outBuffer, size_t inLen, size_t *out_len) {
-        time_t t;
-        srand((unsigned) time(&t));
-        unsigned int blockCount = inLen / DIFF_BLOCK, i, j;
-        NODEDP node_array;
-
-        size_t deltaLen = 0;
-        if(out_len) {
-            *out_len = 0;
-        } else {
-            perror("Out length not declared");
-            return DIFF_NULL_POINTER;
-        }
-        
-        char *done = (char *)malloc(blockCount * sizeof(char));
-        node_array = (NODEDP)malloc(((inLen > blockCount * DIFF_BLOCK)?blockCount + 1 : blockCount) * sizeof(NODESP));
-        for(i = 0; i < blockCount ; i++) {
-            done[i] = 1;
-            node_array[i] = (NODESP)malloc(sizeof(_node_t));
-            node_array[i]->fuzzy_hash_result = (char *)malloc(FUZZY_MAX_RESULT);
-            fuzzy_hash_buf((const unsigned char *)(inBuffer + i*DIFF_BLOCK), DIFF_BLOCK, node_array[i]->fuzzy_hash_result);
-        }
-       
-        unsigned int blockCounter = 0;
-        
-        for(i = 0; i < blockCount; i++) {
+void * fd_inner_loop(void *args_) {
+    LPTR lp = (LPTR)args_;
+    int j;
+    int i_val = lp->i_val;
+    NODESP node_array = lp->mXn.node_array;
+    char *inBuffer = lp->buffer;
+    bit_feild *done = lp->done;
+    
+    if(i_val >= lp->mXn.start && i_val <= lp->mXn.end) {
+        fprintf(stderr, "Self comparrison error. i_val in [start, end]\n");
+        pthread_exit(NULL);
+    }
+    
+    for(j = lp->mXn.start; j < lp->mXn.end ; j++) {
+        if(!done[j].bit)
+            continue;
+        int sim = fuzzy_compare(node_array[i_val].fuzzy_hash_result, node_array[j].fuzzy_hash_result);                
+        if( sim >= DIFF_THLD) {
+            _do_diff(
+                (const unsigned char *)(inBuffer + j*DIFF_BLOCK), 
+                (const unsigned char *)(inBuffer + i_val*DIFF_BLOCK), 
+                &node_array[j].data, 
+                DIFF_BLOCK, DIFF_BLOCK, 
+                &node_array[j].node_size
+            );               
             
-            if(!done[i])
-                continue;
-            node_array[i]->ref_node = -1;
-            node_array[i]->node_size = DIFF_BLOCK;
-            node_array[i]->data = (char *)malloc(DIFF_BLOCK * sizeof(char));
-            *out_len += (node_array[i]->node_size + sizeof(int) + sizeof(size_t));
-            memcpy(node_array[i]->data, (inBuffer + i*DIFF_BLOCK), DIFF_BLOCK);
-            blockCounter+= DIFF_BLOCK;
-            //int inc = (rand() % 9) + 2;
-            for(j = i+1; j < blockCount ; j++) {
-                if(!done[j])
-                    continue;
-                int sim = 0;
-                sim = fuzzy_compare(node_array[i]->fuzzy_hash_result,node_array[j]->fuzzy_hash_result);
-                if( sim >= DIFF_THLD) {
-                    node_array[j] = (NODESP)malloc(sizeof(_node_t));
-                    _do_diff((const unsigned char *)(inBuffer + j*DIFF_BLOCK), (const unsigned char *)(inBuffer + i*DIFF_BLOCK), &node_array[j]->data, DIFF_BLOCK, DIFF_BLOCK, &node_array[j]->node_size);               
-                    
-                    node_array[j]->ref_node = i;
-                    *out_len += (node_array[j]->node_size + sizeof(int) + sizeof(size_t));
-                    
-                    if(!node_array[j]->data) {
-                        strcpy(errorMsg,"Delta not created");
-                        return DIFF_NOT_DONE;
-                    }
-                    
-                    blockCounter += deltaLen;                        
-                    done[j] = 0;
-                    
-                } else {
-                    
-                }
-            }
-            
-            free(node_array[i]->fuzzy_hash_result);
+            node_array[j].ref_node = i_val;
+            done[j].bit            = 0;  
         }
-        
-        if(inLen > blockCount * DIFF_BLOCK) {
-            node_array[i] = (NODESP)malloc(sizeof(_node_t));
-            node_array[i]->ref_node = -1;
-            node_array[i]->node_size = DIFF_BLOCK;
-            node_array[i]->data = (char *)malloc(DIFF_BLOCK * sizeof(char));
-            *out_len += (node_array[i]->node_size + sizeof(int) + sizeof(size_t));
-            memcpy(node_array[i]->data, (inBuffer + i*DIFF_BLOCK), inLen - blockCount * DIFF_BLOCK);
-            blockCount++;
-        }
-        
-        *outBuffer = (char *)malloc(*out_len * sizeof(char));
-        create_delta_buffer(node_array, blockCount, *outBuffer); 
-
-        for(i = 0; i< blockCount; i++) {
-            free(node_array[i]->data);
-            free(node_array[i]);
-        }
-        
-        free(node_array);
-        return DIFF_DONE;        
+    }
+    
+    free(lp);
+    pthread_exit(NULL);
+    
 }
 
-//TODO: Free every malloc buffers on error conditions.
 static diff_result do_diff_fd(char *inBuffer, int out_fd, size_t inLen, size_t *out_len) {
-        time_t t;        
-        srand((unsigned) time(&t));
         
-        char        **fuzzy_hash_result;        
-        NODEDP      node_array;
+        NODESP      node_array;
        	int         node_len;
         int         ret             = 0; 
         char        *node_buffer    = NULL;
         unsigned int blockCount     = inLen / DIFF_BLOCK, i, j;
-        bit_feild   **done          = (bit_feild **)malloc(blockCount * sizeof(bit_feild *));
+        bit_feild   *done           = (bit_feild *)malloc(blockCount * sizeof(bit_feild));
+        pthread_t   *thread         = NULL; 
+        int         j_counter       = 0;
+        void        *exit_status;
         
         if(out_len) {
             *out_len = 0;
@@ -246,11 +195,11 @@ static diff_result do_diff_fd(char *inBuffer, int out_fd, size_t inLen, size_t *
             return DIFF_NULL_POINTER;
         }
         
-        node_array = (NODEDP)malloc((
+        node_array = (NODESP)malloc((
             (inLen > blockCount * DIFF_BLOCK)?
                 blockCount + 1 
                 : blockCount
-        ) * sizeof(NODESP));
+        ) * sizeof(_node_t));
         
         if(out_len) {
             *out_len = 0;
@@ -259,32 +208,23 @@ static diff_result do_diff_fd(char *inBuffer, int out_fd, size_t inLen, size_t *
             return DIFF_NULL_POINTER;
         }
         
-        
-        fuzzy_hash_result = (char **)malloc((
-            (inLen > blockCount * DIFF_BLOCK)?
-                blockCount + 1 
-                : blockCount
-        ) * sizeof(char *));
-        
         for(i = 0; i < blockCount ; i++) {
-            done[i]                 = (bit_feild *)malloc(sizeof(bit_feild));
-            done[i]->bit            = 1;
-            node_array[i]           = (NODESP)malloc(sizeof(_node_t));
-            fuzzy_hash_result[i]    = (char *)malloc(FUZZY_MAX_RESULT);
+            done[i].bit = 1;
+            node_array[i].fuzzy_hash_result   = (char *)malloc(FUZZY_MAX_RESULT);
             
-            fuzzy_hash_buf((const unsigned char *)(inBuffer + i*DIFF_BLOCK), DIFF_BLOCK, fuzzy_hash_result[i]);
+            fuzzy_hash_buf((const unsigned char *)(inBuffer + i*DIFF_BLOCK), 
+                                DIFF_BLOCK, node_array[i].fuzzy_hash_result);
         }
        
-        for(i = 0; i < blockCount; i++) {     
-            
-            if(!done[i]->bit) {
-                if(!node_array[i]->data) {
+        for(i = 0; i < blockCount; i++) {   
+            if(!done[i].bit) {
+                if(!node_array[i].data) {
                     strcpy(errorMsg,"DIFF: Unable to set delta");
                     close(out_fd);
                     return DIFF_NOT_DONE;
                 }
                 
-                if((node_len = flatten_node_buffer(*(node_array[i]), &node_buffer)) != -1) {                
+                if((node_len = flatten_node_buffer(node_array[i], &node_buffer)) != -1) {                
                     ret = write_buf(out_fd, node_buffer, node_len);
                     if (ret < 0) {
                         close(out_fd);
@@ -294,21 +234,20 @@ static diff_result do_diff_fd(char *inBuffer, int out_fd, size_t inLen, size_t *
                     }
                     
                     free(node_buffer);
-                    free(node_array[i]->data);
-                    free(node_array[i]);
-                    free(done[i]);
+                    free(node_array[i].data);
+                    free(node_array[i].fuzzy_hash_result);
                 }
                 
                 continue;
             }
             
-            node_array[i]->ref_node     = -1;
-            node_array[i]->node_size    = DIFF_BLOCK;
-            node_array[i]->data         = (char *)malloc(DIFF_BLOCK * sizeof(char));
-            *out_len += (node_array[i]->node_size + sizeof(int) + sizeof(size_t));
-            memcpy(node_array[i]->data, (inBuffer + i*DIFF_BLOCK), DIFF_BLOCK);
+            node_array[i].ref_node     = -1;
+            node_array[i].node_size    = DIFF_BLOCK;
+            node_array[i].data         = (char *)malloc(DIFF_BLOCK * sizeof(char));
+            *out_len += (node_array[i].node_size + sizeof(int) + sizeof(size_t));
+            memcpy(node_array[i].data, (inBuffer + i*DIFF_BLOCK), DIFF_BLOCK);
                            
-            if((node_len = flatten_node_buffer(*(node_array[i]), &node_buffer)) != -1) {    
+            if((node_len = flatten_node_buffer(node_array[i], &node_buffer)) != -1) {    
                 ret = write_buf(out_fd, node_buffer, node_len);
                 if (ret < 0) {
                     close(out_fd);
@@ -318,38 +257,37 @@ static diff_result do_diff_fd(char *inBuffer, int out_fd, size_t inLen, size_t *
                 }
                 
                 free(node_buffer);
-                free(node_array[i]->data);
-                free(node_array[i]);
-                free(done[i]);
-            }
-
-            for(j = i+1; j < blockCount ; j++) {
-                if(!done[j]->bit)
-                    continue;
-                int sim = fuzzy_compare(fuzzy_hash_result[i],fuzzy_hash_result[j]);                
-                if( sim >= DIFF_THLD) {
-                    _do_diff(
-                        (const unsigned char *)(inBuffer + j*DIFF_BLOCK), 
-                        (const unsigned char *)(inBuffer + i*DIFF_BLOCK), 
-                        &node_array[j]->data, 
-                        DIFF_BLOCK, DIFF_BLOCK, 
-                        &node_array[j]->node_size
-                    );               
-                    
-                    node_array[j]->ref_node = i;
-                   	done[j]->bit            = 0;     
-                    
-                    /* Debugger part*/
-                     //fprintf(stderr,"i = %d j = %d %d %d\n", i, j, blockCount, node_array[j]->node_size);               
-                     
-                } else {
-                    /*
-                     * Do Nothing
-                     */
-                }
+                free(node_array[i].data);
+                free(node_array[i].fuzzy_hash_result);
             }
             
-            free(fuzzy_hash_result[i]);
+            j = i+1;
+            int tot_j_threads = ((blockCount - j) / 3000) + 1;
+            if(thread)  free(thread);
+            thread = (pthread_t*)malloc(sizeof(pthread_t)*tot_j_threads);
+            j_counter = 0;
+            while(j < blockCount) {                
+                LPTR lp             = (LPTR)malloc(sizeof(looper));
+                lp->mXn.node_array  = node_array;   
+                lp->i_val           = i;
+                lp->done            = done;
+                lp->buffer          = inBuffer;
+                lp->mXn.start       = j;
+                lp->mXn.end         = (
+                                        (j + 3000) > blockCount ? 
+                                        (j = blockCount, j) : 
+                                        (j += 3000,j)
+                                    );               
+                
+                int ret = pthread_create(&thread[j_counter++], NULL, fd_inner_loop, (void *)lp);
+                if(ret != 0) {
+                    fprintf (stderr, "FATAL ERROR: Create pthread error: %s!\n", strerror(-ret));
+                    exit (1);
+                }                
+            }
+            
+            j = 0;
+            while(j < j_counter) pthread_join(thread[j++], &exit_status); 
         }
         
         if(inLen > blockCount * DIFF_BLOCK) {
@@ -363,7 +301,6 @@ static diff_result do_diff_fd(char *inBuffer, int out_fd, size_t inLen, size_t *
             blockCount++;
             if((node_len = flatten_node_buffer(node, &node_buffer)) != -1) {                
                 ret = write_buf(out_fd, node_buffer, node_len);
-                //fprintf(stderr,"node size: %d %d %d\n", node.node_size, blockCount, node_len);
                 if (ret < 0) {
                     close(out_fd);
                     strcpy(errorMsg,"DIFF: Unable to write buffer. ");
@@ -376,9 +313,197 @@ static diff_result do_diff_fd(char *inBuffer, int out_fd, size_t inLen, size_t *
             }
         }
         
-        free(fuzzy_hash_result);
+        free(thread);
+        free(done);
+        free(node_array);
         return DIFF_DONE;        
 }
+
+void * loop_thread(void *args_) {
+    LPTR    lp          = (LPTR)args_;
+    int     sim         = 0;
+    int     i_val       = lp->i_val;
+    NODESP  node_array  = lp->mXn.node_array;
+    int     j;
+    
+    
+    if(i_val >= lp->mXn.start && i_val <= lp->mXn.end) {
+        fprintf(stderr, "Self comparrison error. i_val in [start, end]\n");
+        pthread_exit(NULL);
+     }
+    
+    for(j = lp->mXn.start; j < lp->mXn.end; j++) {
+        sim = fuzzy_compare(node_array[i_val].fuzzy_hash_result, node_array[j].fuzzy_hash_result);
+        if(sim >= DIFF_THLD) {
+            pthread_mutex_lock(&node_array[j].mutex);
+            
+            if(node_array[j].sim < sim ) {
+                node_array[j].sim = sim;
+                node_array[j].ref_node = i_val;
+            }
+            
+            pthread_mutex_unlock(&node_array[j].mutex);
+        }
+    }
+    
+    free(lp);
+    pthread_exit(node_array);
+}
+
+static int create_delta_graph(NODESP node_array, int block) {
+    int         i, j;
+    pthread_t   *thread      = NULL;
+    int         j_counter    = 0;
+    void        *exit_status = NULL;
+    for(i = 0; i < block; i++) {
+        
+        j                   = i+1;
+        j_counter           = 0;
+        int tot_j_threads   = ((block - j) / 2000) + 1;
+                
+        if(thread)  free(thread);            
+        thread              = (pthread_t*)malloc(sizeof(pthread_t)*tot_j_threads);
+        
+        while(j < block) {                
+            LPTR lp             = (LPTR)malloc(sizeof(looper));
+            lp->mXn.node_array  = node_array;  
+            lp->i_val           = i; 
+            lp->mXn.start       = j;            
+            lp->mXn.end         = (
+                                    (j + 2000) > block ? 
+                                    (j = block, j) : 
+                                    (j += 2000,j)
+                                );         
+            
+            int ret = pthread_create(&thread[j_counter++], NULL, loop_thread, (void *)lp);
+            if(ret != 0) {
+                fprintf (stderr, "FATAL ERROR: Create pthread error: %s!\n", strerror(-ret));
+                exit (1);
+            }             
+        }
+        
+        j = 0;
+        while(j < j_counter) {
+            pthread_join(thread[j++], &exit_status);    
+            if(!exit_status) {
+                fprintf (stderr, "FATAL ERROR: Inner thread error!\n");
+                exit (1);
+            } 
+        }
+    }
+    
+    free(thread);
+    return 1;
+}
+
+static diff_result do_diff_fd_mst(char *inBuffer, int out_fd, size_t inLen, size_t *out_len) {
+        time_t t;        
+        srand((unsigned) time(&t));
+        
+        NODESP      node_array;
+       	int         node_len;
+        int         ret             = 0; 
+        char        *node_buffer    = NULL;
+        unsigned int blockCount     = inLen / DIFF_BLOCK, i;
+       
+        if(out_len) {
+            *out_len = 0;
+        } else {
+            perror("Out length not declared");
+            return DIFF_NULL_POINTER;
+        }
+        
+        node_array = (NODESP)malloc((
+            (inLen > blockCount * DIFF_BLOCK)?
+                blockCount + 1 
+                : blockCount
+        ) * sizeof(_node_t));        
+        
+        for(i = 0; i < blockCount ; i++) {
+            node_array[i].ref_node = -1;
+            node_array[i].sim      = 0;
+                      
+            node_array[i].fuzzy_hash_result   = (char *)malloc(FUZZY_MAX_RESULT);
+            
+             if (pthread_mutex_init(&node_array[i].mutex, NULL) != 0) {
+                fprintf(stderr, "Mutex init failed\n");
+                return DIFF_THRD_ERROR;
+            }
+            
+            fuzzy_hash_buf((const unsigned char *)(inBuffer + i*DIFF_BLOCK), DIFF_BLOCK, node_array[i].fuzzy_hash_result);
+        }
+        
+        create_delta_graph(node_array, blockCount);
+        
+       
+        for(i = 0; i < blockCount; i++) { 
+            
+            if(node_array[i].ref_node != -1) {                
+                _do_diff(
+                    (const unsigned char *)(inBuffer + i*DIFF_BLOCK), 
+                    (const unsigned char *)(inBuffer + node_array[i].ref_node*DIFF_BLOCK), 
+                    &node_array[i].data, 
+                    DIFF_BLOCK, DIFF_BLOCK, 
+                    &node_array[i].node_size
+                );
+            } else {
+                node_array[i].node_size    = DIFF_BLOCK;
+                node_array[i].data         = (char *)malloc(DIFF_BLOCK * sizeof(char));
+                memcpy(node_array[i].data, (inBuffer + i*DIFF_BLOCK), DIFF_BLOCK);
+            }
+            
+            *out_len += (node_array[i].node_size + sizeof(int) + sizeof(size_t));
+                
+            if(!node_array[i].data) {
+                strcpy(errorMsg,"DIFF: Unable to set delta");
+                close(out_fd);
+                return DIFF_NOT_DONE;
+            }
+            
+            if((node_len = flatten_node_buffer(node_array[i], &node_buffer)) != -1) {                
+                ret = write_buf(out_fd, node_buffer, node_len);
+                if (ret < 0) {
+                    close(out_fd);
+                    strcpy(errorMsg,"DIFF: Unable to write buffer. ");
+                    strcat(errorMsg, strerror(-ret));
+                    return DIFF_PIPE_ERROR;
+                }
+                
+                free(node_buffer);
+                free(node_array[i].data);
+                free(node_array[i].fuzzy_hash_result);
+                pthread_mutex_destroy(&node_array[i].mutex);
+            }
+        }
+        
+        free(node_array);
+        
+        if(inLen > blockCount * DIFF_BLOCK) {
+            _node_t node;
+            node.ref_node   = -1;
+            node.node_size  = inLen - blockCount * DIFF_BLOCK;            
+            node.data       = (char *)malloc(node.node_size * sizeof(char));
+            
+            memcpy(node.data, (inBuffer + i*DIFF_BLOCK) ,node.node_size);
+            *out_len += (node.node_size + sizeof(int) + sizeof(size_t));
+            blockCount++;
+            if((node_len = flatten_node_buffer(node, &node_buffer)) != -1) {                
+                ret = write_buf(out_fd, node_buffer, node_len);
+                if (ret < 0) {
+                    close(out_fd);
+                    strcpy(errorMsg,"DIFF: Unable to write buffer. ");
+                    strcat(errorMsg, strerror(-ret));
+                    return DIFF_PIPE_ERROR;
+                }
+                              
+                free(node_buffer);
+                free(node.data);
+            }
+        }
+        
+        return DIFF_DONE;        
+}
+
 
 static int recreate_delta(NODEDP node_array, SOLID_DATA buffer, int node_count) {
     NODESP node = node_array[node_count - 1];
@@ -571,6 +696,7 @@ static diff_result do_patch_fd(SOLID_DATA buffer) {
     }
     
     buffer->end_result = SPATCH_DONE;
+    free(node_array);
     return PATCH_DONE;
 }
 
@@ -583,12 +709,29 @@ SOLID_RESULT zdelta_patch(void* _args) {
 SOLID_RESULT zdelta_diff(void* _args) {    
     diff_result diff;
     SOLID_DATA buffer = (SOLID_DATA)_args;
-    if(buffer->fd.out != -1) {
-        diff = do_diff_fd(buffer->in_buffer, buffer->fd.out, buffer->in_len, &buffer->out_len);
-    } else {
-        diff = do_diff(buffer->in_buffer, &buffer->out_buffer, buffer->in_len, &buffer->out_len);
+    diff = do_diff_fd(buffer->in_buffer, buffer->fd.out, buffer->in_len, &buffer->out_len);
+        
+    switch(diff) {
+        case DIFF_DONE:         buffer->end_result = SDIFF_DONE;
+        break;
+        case DIFF_NULL_POINTER: buffer->end_result = SDIFF_NULL_POINTER;
+        break;
+        case DIFF_PIPE_ERROR:   buffer->end_result = SPIPE_ERROR;
+        break;
+        default: fprintf(stderr, "ERROR: Diff error, %d %s\n", (int)diff, errorMsg);
+                                buffer->end_result = SDIFF_ERROR;
     }
     
+    if(buffer->in_buffer)
+        free(buffer->in_buffer);
+    return buffer->end_result;
+}
+
+SOLID_RESULT zmst_diff(void* _args) {    
+    diff_result diff;
+    SOLID_DATA buffer = (SOLID_DATA)_args;
+    diff = do_diff_fd_mst(buffer->in_buffer, buffer->fd.out, buffer->in_len, &buffer->out_len);
+        
     switch(diff) {
         case DIFF_DONE:         buffer->end_result = SDIFF_DONE;
         break;

@@ -54,6 +54,8 @@ typedef struct _node_{
     char * fuzzy_hash_result;
     int ref_node;
     size_t node_size;
+    unsigned char sim;
+    pthread_mutex_t mutex;
 } _node_t;
 
 typedef _node_t* NODESP;
@@ -72,7 +74,8 @@ typedef enum{
     PATCH_ERROR = 7,
     
     DIFF_PIPE_ERROR = 8,
-    DIFF_PIPE_IO_NULL = 9
+    DIFF_PIPE_IO_NULL = 9,
+    DIFF_THRD_ERROR = 10
 } diff_result;
 
 #define DIFF_BLOCK 50000
@@ -83,6 +86,7 @@ typedef enum{
 
 
 SOLID_RESULT zdelta_diff(void* _args);
+SOLID_RESULT zmst_diff(void* _args);
 SOLID_RESULT zdelta_patch(void* _args);
 
 //diff_result _do_patch(char *deltaBuffer, char *baseBuffer, char **patchBuffer, size_t deltaLen, size_t baseLen, size_t *patchLen);
