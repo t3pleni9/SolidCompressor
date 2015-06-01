@@ -16,8 +16,8 @@ MKBDIR = mkdir -p $(BINDIR)
 
 
 
-LIBS = -lsolidComp -lm -lcrypto -lfuzzy -lzd -lz -lpthread 
-TESTLIBS = -lm -lcrypto -lfuzzy -lzd -lz -lpthread 
+LIB = -lsolidComp
+DEPLIBS = -lm -lcrypto -lfuzzy -lzd -lz -lpthread -lbz2
 
 _DEPS = scons.h streamc.h hash.h index.h dedup.h diff.h solidlib.h 
 DEPS = $(patsubst %,$(IDIR)/%,$(_DEPS))
@@ -36,17 +36,17 @@ $(ODIR)/%.o: $(SDIR)/%.cpp $(DEPS)
 
 install: lib
 	$(MKBDIR)
-	$(CC) main.c -Wl,-R$(SLDIR) -L$(SLDIR) -o $(BINDIR)main $(CFLAGS) $(LIBS) 
+	$(CC) main.c -Wl,-R$(SLDIR) -L$(SLDIR) -o $(BINDIR)main $(CFLAGS) $(LIB)
 
 lib: $(OBJ)
 	$(MKSLDIR)
-	$(CXX) -shared -Wl,-soname,libsolidComp.so.1 -o $(SLDIR)/libsolidComp.so.1 $^ -lc
+	$(CXX) -shared -Wl,-soname,libsolidComp.so.1 -o $(SLDIR)/libsolidComp.so.1 $^ -lc $(DEPLIBS) 
 	cd $(SLDIR); \
-	ln -sf libsolidComp.so.1 libsolidComp.so
+	ln -sf libsolidComp.so.1 libsolidComp.so 
 
 test: $(OBJ)
 	$(MKBDIR)
-	$(CXX) main.c -o $(BINDIR)main $^ $(CXXFLAGS) $(TESTLIBS)
+	$(CXX) main.c -o $(BINDIR)main $^ $(CXXFLAGS) $(DEPLIBS)
 
 $(_OBJ): $(OBJ)	
 

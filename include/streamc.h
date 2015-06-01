@@ -22,8 +22,11 @@
  */
 
 #include <zlib.h>
+#include <bzlib.h>
 #include <stdio.h>
 #include <assert.h>
+#include <string.h>
+#include <pthread.h>
 
 #include "scons.h"
 
@@ -38,7 +41,8 @@ extern int level;
 extern char errorMsg[100];
 
 void* zlib_compress(void* _args);
-SOLID_RESULT bzip2_compress(char *in_buffer, char **out_buffer, size_t in_len, size_t *out_len); // TODO: to be done bzip2
+void* bzip2_compress(void* _args);
+void* bzip2_decompress(void* _args);
 SOLID_RESULT _7z_compress(char *in_buffer, char **out_buffer, size_t in_len, size_t *out_len); // TODO: to be done 7z
 
 void* zlib_decompress(void* _args);

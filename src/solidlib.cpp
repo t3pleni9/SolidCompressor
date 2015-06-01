@@ -34,7 +34,7 @@ pthread_mutex_t lock;
 ulInt netIn         = 0;
 ulInt netOut        = 0;
 
-MODALGO _scompressor_  = ZLIBC;
+MODALGO _scompressor_  = BZIPC;
 MODALGO _delta_        = ZMSTD;
 MODALGO _duplicator_   = LZDDP;
 
@@ -124,6 +124,10 @@ static void * _s_init(SOLID_DATA *buffer) {
         case ZLIBC: (*buffer)->scomp = (zlib_compress);
         break;
         case ZLIBD: (*buffer)->scomp = (zlib_decompress);
+        break;
+        case BZIPC: (*buffer)->scomp = (bzip2_compress);
+        break;
+        case BZIPD: (*buffer)->scomp = (bzip2_decompress);
         break;
         default : (*buffer)->scomp = (zlib_compress);
     }
@@ -401,24 +405,6 @@ void *solid_de_comp_thread(void *args_) {
 	pthread_exit(&buffer->end_result);
 }
 	
-
-/*
- * solid_de_compress_fd(....) {
- *  while(!EOF) {
- * Thread it where ever you feel good about threading
- *      x = read sizeof(size_t)
- *      buffer->in_buffer = read next x;
- *      buffer->scomp = (decompress);
- *      stream_compress(buffer);
- *      memcpy(buffer->in_buffer, buffer->out_buffer, buffer->out_len)
- *      patch(buffer)
- *      memcpy(buffer->in_buffer, buffer->out_buffer, buffer->out_len)
- *      duplicate(buffer);
- *      write_buf(buffer->out_len);
- *  }       
- * }
- */
-
 /*SOLID_RESULT solid_compress(char* inbuffer, char *outbuffer, size_t in_len, size_t * out_len) {
     
     t_solid_data buffer;

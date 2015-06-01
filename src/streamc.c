@@ -23,10 +23,58 @@
  
 
 #include "streamc.h"
-#include <string.h>
-#include <pthread.h>
 
-int level = Z_DEFAULT_COMPRESSION;
+int level =9;
+
+static SOLID_RESULT _bzip2_decompress(int fd_in, int fd_out) {
+        level = 9;
+        BZFILE *BZ2fp_r = NULL;
+        int len = 0;
+        char buff[0x1000];
+        if((BZ2fp_r = BZ2_bzdopen(fd_in,"rb"))==NULL){
+            strcpy(errorMsg, "Can't bz2openstream");
+            return SSTRM_ERROR;
+        }
+        
+        while((len=BZ2_bzread(BZ2fp_r,buff,0x1000))>0){
+            if (write_buf(fd_out, buff,len) != len) {
+                return SPIPE_ERROR;
+            }
+        }
+         
+        BZ2_bzclose(BZ2fp_r);
+        return SSTRM_DONE;
+}
+
+static SOLID_RESULT _bzip2_compress(int fd_in, int fd_out) {
+    level = 9;
+    BZFILE *BZ2fp_w = NULL;
+    int len = 0;
+    t_solid_data buffer;
+    buffer.in_buffer = (char *)malloc(0x1000 * sizeof(char));
+    buffer.fd.in = fd_in;
+    buffer.fd.out = fd_out;
+    
+    char mode[10];
+    mode[0]='w';
+    mode[1] = '0' + level;
+    mode[2] = '\0';
+
+    if((BZ2fp_w = BZ2_bzdopen(fd_out,mode))==NULL){
+        strcpy(errorMsg, "Can't bz2openstream");
+        return SSTRM_ERROR;
+    }
+    
+    while((len=fill_buffer(&buffer, 0x1000))>=0){
+        if(buffer.in_len == 0) // No more data to be read. fill_buffer returning 0 means last read.
+            break;
+        BZ2_bzwrite(BZ2fp_w,buffer.in_buffer,buffer.in_len);
+    }
+    
+    BZ2_bzclose(BZ2fp_w);
+    if(buffer.in_buffer)    free(buffer.in_buffer);
+    return SSTRM_DONE;
+}
 
 static SOLID_RESULT _zlib_compress(int fd_in, int fd_out) {
     int ret, flush;
@@ -146,8 +194,8 @@ static SOLID_RESULT _zlib_decompress(int fd_in, int fd_out) {
 void* zlib_compress(void* _args) {
     SOLID_DATA buffer = (SOLID_DATA)_args;
     if((buffer->end_result = _zlib_compress(buffer->fd.in, buffer->fd.out)) != SSTRM_DONE) {
-        fprintf(stderr, "ERROR: Stream compress error - %s", errorMsg);
-         pthread_exit(&buffer->end_result);
+        fprintf(stderr, "ERROR: Stream compress error - %s\n", errorMsg);
+        pthread_exit(&buffer->end_result);
     }   
     pthread_exit(&buffer->end_result);   
 }
@@ -155,8 +203,28 @@ void* zlib_compress(void* _args) {
 void* zlib_decompress(void* _args) {
     SOLID_DATA buffer = (SOLID_DATA)_args;
     if((buffer->end_result = _zlib_decompress(buffer->fd.in, buffer->fd.out)) != SSTRM_DONE) {
+        fprintf(stderr, "ERROR: Stream compress error - %s\n", errorMsg);
+        pthread_exit(&buffer->end_result);
+    }  
+    close(buffer->fd.out);
+    pthread_exit(&buffer->end_result);
+}
+
+void* bzip2_compress(void* _args) {
+    SOLID_DATA buffer = (SOLID_DATA)_args;
+    if((buffer->end_result = _bzip2_compress(buffer->fd.in, buffer->fd.out)) != SSTRM_DONE) {
+        fprintf(stderr, "ERROR: Stream compress error - %s\n", errorMsg);
+        pthread_exit(&buffer->end_result);
+    }  
+    close(buffer->fd.out);
+    pthread_exit(&buffer->end_result);
+}
+
+void* bzip2_decompress(void* _args) {
+    SOLID_DATA buffer = (SOLID_DATA)_args;
+    if((buffer->end_result = _bzip2_decompress(buffer->fd.in, buffer->fd.out)) != SSTRM_DONE) {
         fprintf(stderr, "ERROR: Stream compress error - %s", errorMsg);
-         pthread_exit(&buffer->end_result);
+        pthread_exit(&buffer->end_result);
     }  
     close(buffer->fd.out);
     pthread_exit(&buffer->end_result);
