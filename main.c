@@ -11,11 +11,11 @@ int main(int argc, char **argv) {
         char mybuf[4096];
         setvbuf(stdin, mybuf, _IOFBF, 4096);
         FILE *inFile, *outFile;
-        inFile = fopen("/home/justin/compFile.t.out.bz2", "rb");
-        outFile = fopen("/home/justin/compFile.t.32", "wb");
+        inFile = fopen("/home/justin/bzip2-1.0.6.tar", "rb");
+        outFile = fopen("/home/justin/temp.out", "wb");
         if(inFile) {
             begin = clock();
-            solid_de_compress_fd(fileno(inFile), fileno(outFile));
+            solid_compress_fd(fileno(inFile), fileno(outFile));
             end = clock();
             time_spent = (double)(end - begin) / CLOCKS_PER_SEC;
             printf("time: %f\n", time_spent);
