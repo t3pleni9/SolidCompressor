@@ -319,63 +319,104 @@ static diff_result do_diff_fd(char *inBuffer, int out_fd, size_t inLen, size_t *
         return DIFF_DONE;        
 }
 
+void * stream_buff_handle(void *_args) {
+    SOLID_DATA buffer = (SOLID_DATA)_args;
+    buffer->in_buffer = (char *)malloc(SEG_S * sizeof(char));
+    int readed = 0;
+    while(1) {
+        readed = fill_buffer(buffer, SEG_S);
+        if( readed < 0) {
+            fprintf(stderr, "Error: failed to read stream");
+            buffer->end_result = SPIPE_ERROR;
+            break;
+        } else if(!buffer->in_len) { 
+            fprintf(stderr, "DIFF clossed the stream\n");
+            buffer->end_result = SSTRM_DONE;
+            break; 
+        }
+        fprintf(stderr, "Done reading %d %d\n", buffer->in_len, buffer->fd.out);
+        readed = write_buf(buffer->fd.out, buffer->in_buffer, buffer->in_len);
+        if (readed < 0) {
+            strcpy(errorMsg,"Stream buffer handl: Unable to write buffer. ");
+            strcat(errorMsg, strerror(-readed));
+            buffer->end_result = SPIPE_ERROR;
+            break;
+        }
+        fprintf(stderr, "Done writing %d\n", buffer->in_len);
+    } 
+    if(buffer->in_buffer)   free(buffer->in_buffer);
+    pthread_exit(&buffer->end_result);    
+}
+
+
 void * loop_thread(void *args_) {
     LPTR    lp          = (LPTR)args_;
     int     sim         = 0;
     int     i_val       = lp->i_val;
+    int     i           = 0;
     NODESP  node_array  = lp->mXn.node_array;
     int     j;
     
-    
-    if(i_val >= lp->mXn.start && i_val <= lp->mXn.end) {
+    clock_t begin, end;
+        double time_spent = 0;
+        
+        begin = clock();
+    /*if(i_val >= lp->mXn.start && i_val <= lp->mXn.end) {
         fprintf(stderr, "Self comparrison error. i_val in [start, end]\n");
         pthread_exit(NULL);
-     }
+     }*/
     
-    for(j = lp->mXn.start; j < lp->mXn.end; j++) {
-        sim = fuzzy_compare(node_array[i_val].fuzzy_hash_result, node_array[j].fuzzy_hash_result);
-        if(sim >= DIFF_THLD) {
-            pthread_mutex_lock(&node_array[j].mutex);
-            
-            if(node_array[j].sim < sim ) {
-                node_array[j].sim = sim;
-                node_array[j].ref_node = i_val;
+    for(i = lp->mXn.start; i < lp->mXn.end; i++) {
+        for(j = i+1; j < i_val; j++) {
+            sim = fuzzy_compare(node_array[i].fuzzy_hash_result, node_array[j].fuzzy_hash_result);
+            if(sim >= DIFF_THLD) {
+                pthread_mutex_lock(&node_array[j].mutex);
+                
+                if(node_array[j].sim < sim ) {
+                    node_array[j].sim = sim;
+                    node_array[j].ref_node = i;
+                }
+                
+                pthread_mutex_unlock(&node_array[j].mutex);
             }
-            
-            pthread_mutex_unlock(&node_array[j].mutex);
         }
     }
-    
-    free(lp);
+    end = clock();
+    time_spent = (double)(end - begin) / CLOCKS_PER_SEC;
+    fprintf(stderr, "finished: %d %f\n", lp->mXn.end, time_spent);
+    if(lp) free(lp);
     pthread_exit(node_array);
 }
 
 static int create_delta_graph(NODESP node_array, int block) {
-    int         i, j;
+    int         i = 0, j;
+    
     pthread_t   *thread      = NULL;
     int         j_counter    = 0;
     void        *exit_status = NULL;
-    for(i = 0; i < block; i++) {
+    int         percDiv[8]   = { 13,17,20,55 };
+    //for(i = 0; i < block; i++) { 
         
-        j                   = i+1;
         j_counter           = 0;
-        int tot_j_threads   = ((block - j) / 2000) + 1;
+        int tot_j_threads   = 7;
                 
-        if(thread)  free(thread);            
-        thread              = (pthread_t*)malloc(sizeof(pthread_t)*tot_j_threads);
+        //if(thread)  free(thread);            
+        thread  = (pthread_t*)malloc(sizeof(pthread_t)*tot_j_threads);
         
-        while(j < block) {                
-            LPTR lp             = (LPTR)malloc(sizeof(looper));
+        while(i < block) {                
+            LPTR lp             = NULL;
+            lp                  = (LPTR)malloc(sizeof(looper));
             lp->mXn.node_array  = node_array;  
-            lp->i_val           = i; 
-            lp->mXn.start       = j;            
+            lp->i_val           = block; 
+            lp->mXn.start       = i;            
             lp->mXn.end         = (
-                                    (j + 2000) > block ? 
-                                    (j = block, j) : 
-                                    (j += 2000,j)
-                                );         
+                                    (i + (block * percDiv[j_counter] / 100) ) >= block ? 
+                                    (i = block, i) : 
+                                    (i += (block * percDiv[j_counter] / 100),i)
+                                );      
             
             int ret = pthread_create(&thread[j_counter++], NULL, loop_thread, (void *)lp);
+            fprintf(stderr, "%d %d %d\n", j_counter,i,block);
             if(ret != 0) {
                 fprintf (stderr, "FATAL ERROR: Create pthread error: %s!\n", strerror(-ret));
                 exit (1);
@@ -390,21 +431,30 @@ static int create_delta_graph(NODESP node_array, int block) {
                 exit (1);
             } 
         }
-    }
+    //}
     
-    free(thread);
+    if(thread) free(thread);
+    
     return 1;
 }
 
-static diff_result do_diff_fd_mst(char *inBuffer, int out_fd, size_t inLen, size_t *out_len) {
+static diff_result do_diff_fd_mst(char *inBuffer, int out_fd, size_t inLen, size_t *out_len, pthread_t* t_diff) {
         time_t t;        
         srand((unsigned) time(&t));
-        
+        static int first_run = 1;
+        int pipefd[2]   = {-1, -1};
+        static t_solid_data strm_buffer;
         NODESP      node_array;
        	int         node_len;
         int         ret             = 0; 
         char        *node_buffer    = NULL;
         unsigned int blockCount     = inLen / DIFF_BLOCK, i;
+        ret = pipe(pipefd);    
+        if (ret < 0) {
+            ret = -errno;
+            fprintf(stderr, "ERROR: pipe failed. %s\n", strerror(-ret));
+            return DIFF_PIPE_ERROR;
+        }
        
         if(out_len) {
             *out_len = 0;
@@ -433,11 +483,43 @@ static diff_result do_diff_fd_mst(char *inBuffer, int out_fd, size_t inLen, size
             fuzzy_hash_buf((const unsigned char *)(inBuffer + i*DIFF_BLOCK), DIFF_BLOCK, node_array[i].fuzzy_hash_result);
         }
         
+        clock_t begin, end, begin1, end1;
+        double time_spent = 0, tim2 = 0;
+        
+        begin = clock();
         create_delta_graph(node_array, blockCount);
-               
+        end = clock();
+        time_spent = (double)(end - begin) / CLOCKS_PER_SEC;
+        fprintf(stderr, "Create Graph time: %f\n", time_spent);
+        //time_spent = 0;
+        if(!first_run) {
+            if(wait_for_finish(*t_diff) != SSTRM_DONE) {
+                fprintf(stderr, "ERROR: Diff thread not done\n");
+                return DIFF_PIPE_ERROR;
+            }
+        }
+        
+        strm_buffer.in_buffer = NULL;
+        strm_buffer.out_buffer = NULL;
+        strm_buffer.in_len = 0;
+        strm_buffer.out_len = 0;
+        strm_buffer.fd.in = pipefd[0];
+        strm_buffer.fd.out = out_fd;
+        
+        ret = pthread_create(t_diff, NULL, stream_buff_handle, (void *)&strm_buffer);                
+        if (ret) {
+            ret = -ret;
+            fprintf(stderr, "ERROR: thread setup failed: %s\n",
+                strerror(-ret));
+            if (pipefd[1] != -1)
+                close(pipefd[1]);
+            return DIFF_PIPE_ERROR;
+        }
+    
         for(i = 0; i < blockCount; i++) { 
-            
-            if(node_array[i].ref_node != -1) {                
+            begin1 = clock();    
+            if(node_array[i].ref_node != -1) { 
+                           
                 _do_diff(
                     (const unsigned char *)(inBuffer + i*DIFF_BLOCK), 
                     (const unsigned char *)(inBuffer + node_array[i].ref_node*DIFF_BLOCK), 
@@ -445,6 +527,7 @@ static diff_result do_diff_fd_mst(char *inBuffer, int out_fd, size_t inLen, size
                     DIFF_BLOCK, DIFF_BLOCK, 
                     &node_array[i].node_size
                 );
+                
             } else {
                 node_array[i].node_size    = DIFF_BLOCK;
                 node_array[i].data         = (inBuffer + i*DIFF_BLOCK);
@@ -455,14 +538,20 @@ static diff_result do_diff_fd_mst(char *inBuffer, int out_fd, size_t inLen, size
                 
             if(!node_array[i].data) {
                 strcpy(errorMsg,"DIFF: Unable to set delta");
-                close(out_fd);
+                close(pipefd[1]);
                 return DIFF_NOT_DONE;
             }
             
-            if((node_len = flatten_node_buffer(node_array[i], &node_buffer)) != -1) {                
-                ret = write_buf(out_fd, node_buffer, node_len);
+            if((node_len = flatten_node_buffer(node_array[i], &node_buffer)) != -1) {
+                end1 = clock();
+                time_spent += (double)(end1 - begin1) / CLOCKS_PER_SEC;
+                
+                begin = clock();                
+                ret = write_buf(pipefd[1], node_buffer, node_len);
+                end = clock();
+                tim2 += (double)(end - begin) / CLOCKS_PER_SEC;
                 if (ret < 0) {
-                    close(out_fd);
+                    close(pipefd[1]);
                     strcpy(errorMsg,"DIFF: Unable to write buffer. ");
                     strcat(errorMsg, strerror(-ret));
                     return DIFF_PIPE_ERROR;
@@ -475,8 +564,9 @@ static diff_result do_diff_fd_mst(char *inBuffer, int out_fd, size_t inLen, size
             }
         }
         
+        first_run = 0;
         free(node_array);
-        
+        begin1 = clock(); 
         if(inLen > blockCount * DIFF_BLOCK) {
             _node_t node;
             node.ref_node   = -1;
@@ -487,7 +577,7 @@ static diff_result do_diff_fd_mst(char *inBuffer, int out_fd, size_t inLen, size
             *out_len += (node.node_size + sizeof(int) + sizeof(size_t));
             blockCount++;
             if((node_len = flatten_node_buffer(node, &node_buffer)) != -1) {                
-                ret = write_buf(out_fd, node_buffer, node_len);
+                ret = write_buf(pipefd[1], node_buffer, node_len);
                 if (ret < 0) {
                     close(out_fd);
                     strcpy(errorMsg,"DIFF: Unable to write buffer. ");
@@ -499,7 +589,10 @@ static diff_result do_diff_fd_mst(char *inBuffer, int out_fd, size_t inLen, size
                 free(node.data);
             }
         }
-        
+        end1 = clock();
+        time_spent += (double)(end1 - begin1) / CLOCKS_PER_SEC;
+        close(pipefd[1]);
+        fprintf(stderr, "Str time: %f diff time:%f\n", tim2, time_spent);
         return DIFF_DONE;        
 }
 
@@ -699,6 +792,7 @@ static diff_result do_patch_fd(SOLID_DATA buffer) {
     return PATCH_DONE;
 }
 
+
 SOLID_RESULT zdelta_patch(void* _args) {
     SOLID_DATA buffer = (SOLID_DATA)_args;
     do_patch_fd(buffer);
@@ -728,20 +822,59 @@ SOLID_RESULT zdelta_diff(void* _args) {
 
 SOLID_RESULT zmst_diff(void* _args) {    
     diff_result diff;
+    static int i = 0;
+    clock_t begin, end;
+    double time_spent;
     SOLID_DATA buffer = (SOLID_DATA)_args;
-    diff = do_diff_fd_mst(buffer->in_buffer, buffer->fd.out, buffer->in_len, &buffer->out_len);
-        
-    switch(diff) {
-        case DIFF_DONE:         buffer->end_result = SDIFF_DONE;
-        break;
-        case DIFF_NULL_POINTER: buffer->end_result = SDIFF_NULL_POINTER;
-        break;
-        case DIFF_PIPE_ERROR:   buffer->end_result = SPIPE_ERROR;
-        break;
-        default: fprintf(stderr, "ERROR: Diff error, %d %s\n", (int)diff, errorMsg);
-                                buffer->end_result = SDIFF_ERROR;
-    }
     
+    SOLID_RESULT retResult;
+    pthread_t t_diff;
+        
+    while(1){
+        int ret = read( buffer->fd.in, (char *)&(buffer->in_len), sizeof(buffer->in_len));
+        if(buffer->in_buffer)   free(buffer->in_buffer);
+        buffer->in_buffer = (char *)malloc(buffer->in_len * sizeof(char));
+        
+        ret = fill_buffer(buffer, buffer->in_len);
+        if( ret < 0) {
+            fprintf(stderr, "Error: failed to read stream");
+            buffer->end_result = SPIPE_ERROR;
+            goto out;
+        } else if(!buffer->in_len) {  
+            /*if(!first_run) {
+                    
+            }*/
+                         
+            buffer->end_result   = SDIFF_DONE;
+            goto out;
+        }
+        
+        begin = clock();
+        diff = do_diff_fd_mst(buffer->in_buffer, buffer->fd.out, buffer->in_len, &buffer->out_len, &t_diff);
+        
+        end = clock();
+        time_spent = (double)(end - begin) / CLOCKS_PER_SEC;
+        fprintf(stderr,"Delta:%d %f\n", i++, time_spent);
+        switch(diff) {
+            case DIFF_DONE:         buffer->end_result = SDIFF_DONE;
+            break;
+            case DIFF_NULL_POINTER: buffer->end_result = SDIFF_NULL_POINTER;
+            break;
+            case DIFF_PIPE_ERROR:   buffer->end_result = SPIPE_ERROR;
+            break;
+            default: fprintf(stderr, "ERROR: Diff error, %d %s\n", (int)diff, errorMsg);
+                                    buffer->end_result = SDIFF_ERROR;
+        }
+        
+        if(buffer->end_result != SDIFF_DONE)
+            break;
+    }
+out:
+    
+    if((retResult = wait_for_finish(t_diff)) != SSTRM_DONE) {
+        fprintf(stderr, "ERROR: Diff thread not done\n");
+        buffer->end_result = retResult;
+    }
     if(buffer->in_buffer)
         free(buffer->in_buffer);
     return buffer->end_result;

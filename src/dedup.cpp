@@ -286,15 +286,19 @@ SOLID_RESULT DeDup::duplicate(SOLID_DATA de_buffer) {
 
 void * de_dup(void* _args) {
     static int i = 0;
-    fprintf(stderr, "%d\n", i++);
+    clock_t begin, end;
+    double time_spent;
     DeDup deDup;
     SOLID_DATA buffer = (SOLID_DATA) _args;
-    
+    begin = clock();
     buffer->end_result = deDup.de_dup(buffer);
-    /*if(buffer->out_len) 
+    end = clock();
+    time_spent = (double)(end - begin) / CLOCKS_PER_SEC;
+    fprintf(stderr,"DD:%d %f ", i++, time_spent);
+    if(buffer->out_len) 
        fprintf(stderr, "Done dedup %d %d\n", buffer->in_len, buffer->out_len);
     else 
-       fprintf(stderr,"out len is null\n");*/
+       fprintf(stderr,"out len is null\n");
     return (void *)&buffer->end_result;
 }
 

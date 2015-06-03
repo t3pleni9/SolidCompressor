@@ -187,7 +187,7 @@ SOLID_RESULT _solid_compress_fd(int in_fd, int out_fd) {
     SOLID_DATA      diff_buffer;     
      
     SOLID_RESULT    retResult      = SPIPE_DONE;
-    
+    int pipefd[2]   = {-1, -1};
     int ret         = 0;
     int first_run   = 1;
     
@@ -202,13 +202,33 @@ SOLID_RESULT _solid_compress_fd(int in_fd, int out_fd) {
         return S_NULL;
     }
     
+    ret = pipe(pipefd);    
+    if (ret < 0) {
+        ret = -errno;
+        fprintf(stderr, "ERROR: pipe failed. %s\n", strerror(-ret));
+        retResult = SPIPE_ERROR;
+        goto out;
+    }
+    
     if(in_fd > 0 && out_fd > 0) {
         de_dup_buffer->fd.in    = in_fd;
+        de_dup_buffer->fd.out   = pipefd[1];
         diff_buffer->fd.out     = out_fd;
+        diff_buffer->fd.in      = pipefd[0];
+        
     } else {
         fprintf(stderr,"I/O file descriptors not set");
         return SPIPE_NOT_SET;
     }    
+    
+    ret = pthread_create(&t_diff, NULL, diff_pipe, diff_buffer);                
+    if (ret) {
+        ret = -ret;
+        fprintf(stderr, "ERROR: thread setup failed: %s\n",
+            strerror(-ret));
+        retResult = STH_ERROR;
+        goto out;
+    }
     
     while(1) {
         de_dup_buffer->in_buffer = (char *) malloc(SEG_S);
@@ -219,10 +239,7 @@ SOLID_RESULT _solid_compress_fd(int in_fd, int out_fd) {
             return SPIPE_ERROR;
         } else if(!de_dup_buffer->in_len) {  
             if(!first_run) {
-                if((retResult = wait_for_finish(t_diff)) != SDIFF_DONE) {
-                    fprintf(stderr, "ERROR: Diff thread not done\n");
-                    goto out;
-                }
+                
             }
                          
             ret         = 0;
@@ -232,16 +249,24 @@ SOLID_RESULT _solid_compress_fd(int in_fd, int out_fd) {
             de_dup_buffer->out_buffer = NULL;
             if(*((SOLID_RESULT *)(de_dup_buffer->dupcomp)(de_dup_buffer)) == SDEDUP_DONE) {
                 if(!first_run) {                        
-                    if((retResult = wait_for_finish(t_diff)) != SDIFF_DONE) {
-                        fprintf(stderr, "ERROR: Diff thread not done\n");
-                        goto out;
-                    }                        
+                                          
                 }
                 
-                diff_buffer->in_buffer = (char *) malloc(de_dup_buffer->out_len);                
-                memcpy(diff_buffer->in_buffer, de_dup_buffer->out_buffer, de_dup_buffer->out_len);
-                diff_buffer->out_buffer = NULL;
-                diff_buffer->in_len = de_dup_buffer->out_len;
+                ret = write_buf(de_dup_buffer->fd.out, (char *)&(de_dup_buffer->out_len), sizeof(de_dup_buffer->out_len));
+                if (ret < 0) {
+                    close(out_fd);
+                    strcpy(errorMsg,"DeDup: Unable to write buffer length. ");
+                    strcat(errorMsg, strerror(-ret));
+                    goto out;
+                }
+                
+                ret = write_buf(de_dup_buffer->fd.out, de_dup_buffer->out_buffer, de_dup_buffer->out_len);
+                if (ret < 0) {
+                    close(out_fd);
+                    strcpy(errorMsg,"DeDup: Unable to write buffer. ");
+                    strcat(errorMsg, strerror(-ret));
+                    goto out;
+                }
                 
                 if(de_dup_buffer->in_buffer)    free(de_dup_buffer->in_buffer);                    
                 if(de_dup_buffer->out_buffer)   free(de_dup_buffer->out_buffer);
@@ -251,14 +276,7 @@ SOLID_RESULT _solid_compress_fd(int in_fd, int out_fd) {
                 de_dup_buffer->in_len       = 0;
                 de_dup_buffer->out_len      = 0;
                 
-                ret = pthread_create(&t_diff, NULL, diff_pipe, diff_buffer);                
-                if (ret) {
-                    ret = -ret;
-                    fprintf(stderr, "ERROR: thread setup failed: %s\n",
-                        strerror(-ret));
-                    retResult = STH_ERROR;
-                    goto out;
-                }
+                
                 
                 first_run = 0;
             }
@@ -266,6 +284,16 @@ SOLID_RESULT _solid_compress_fd(int in_fd, int out_fd) {
     }
     
     out:
+        if (pipefd[1] != -1)
+            close(pipefd[1]); 
+        if((retResult = wait_for_finish(t_diff)) != SDIFF_DONE) {
+            fprintf(stderr, "ERROR: Diff thread not done\n");
+        }
+        
+        if(retResult == SDIFF_DONE) retResult = S_DONE;
+        
+        if (pipefd[0] != -1)
+            close(pipefd[0]); 
         close(out_fd);
         if(de_dup_buffer->in_buffer)
             free(de_dup_buffer->in_buffer);
@@ -300,6 +328,7 @@ SOLID_RESULT solid_compress_fd(int in_fd, int dump_fd) {
         return S_NULL;
     }
     
+    
     buffer->fd.out = dump_fd;
     buffer->fd.in  = pipefd[0];
     
@@ -313,7 +342,7 @@ SOLID_RESULT solid_compress_fd(int in_fd, int dump_fd) {
         retResult = STH_ERROR;
         goto out;
     }
-    
+    fprintf(stderr, "fdout : %d\n", pipefd[1]);
     if((retResult = _solid_compress_fd(in_fd, pipefd[1])) != S_DONE) {
         fprintf(stderr, "ERROR: Main compression thread not done\n");
         goto out;
