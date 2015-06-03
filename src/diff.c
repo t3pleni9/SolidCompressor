@@ -434,8 +434,7 @@ static diff_result do_diff_fd_mst(char *inBuffer, int out_fd, size_t inLen, size
         }
         
         create_delta_graph(node_array, blockCount);
-        
-       
+               
         for(i = 0; i < blockCount; i++) { 
             
             if(node_array[i].ref_node != -1) {                
@@ -448,8 +447,8 @@ static diff_result do_diff_fd_mst(char *inBuffer, int out_fd, size_t inLen, size
                 );
             } else {
                 node_array[i].node_size    = DIFF_BLOCK;
-                node_array[i].data         = (char *)malloc(DIFF_BLOCK * sizeof(char));
-                memcpy(node_array[i].data, (inBuffer + i*DIFF_BLOCK), DIFF_BLOCK);
+                node_array[i].data         = (inBuffer + i*DIFF_BLOCK);
+                //memcpy(node_array[i].data, (inBuffer + i*DIFF_BLOCK), DIFF_BLOCK);
             }
             
             *out_len += (node_array[i].node_size + sizeof(int) + sizeof(size_t));
@@ -470,7 +469,7 @@ static diff_result do_diff_fd_mst(char *inBuffer, int out_fd, size_t inLen, size
                 }
                 
                 free(node_buffer);
-                free(node_array[i].data);
+                if(node_array[i].ref_node != -1) free(node_array[i].data);
                 free(node_array[i].fuzzy_hash_result);
                 pthread_mutex_destroy(&node_array[i].mutex);
             }
