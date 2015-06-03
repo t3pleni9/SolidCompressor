@@ -8,11 +8,11 @@
 int main(int argc, char **argv) {
         clock_t begin, end;
         double time_spent;
-        char mybuf[4096];
-        setvbuf(stdin, mybuf, _IOFBF, 4096);
+        
         FILE *inFile, *outFile;
-        inFile = fopen("/home/justin/compFile.t.out.bz2", "rb");
-        outFile = fopen("/home/justin/compFile.t.32", "wb");
+        inFile = fopen("/home/justin/temp.out.bz2", "rb");
+        outFile = fopen("/home/justin/bzip2-1.0.6.tar1", "wb");
+        
         if(inFile) {
             begin = clock();
             solid_de_compress_fd(fileno(inFile), fileno(outFile));
