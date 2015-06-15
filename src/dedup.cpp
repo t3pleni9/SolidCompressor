@@ -236,6 +236,7 @@ SOLID_RESULT DeDup::duplicate(SOLID_DATA de_buffer) {
                 return SPIPE_ERROR;
             }
             
+            free(buffer);
             return SDUP_DONE;
         }
             

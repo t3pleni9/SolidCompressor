@@ -406,10 +406,6 @@ SOLID_RESULT solid_de_compress_fd(int in_fd, int out_fd) {
     
     (buffer->dcomp)(diff_buffer);
     
-    /*if((retResult = _solid_compress_fd(in_fd, pipefd[1])) != S_DONE) {
-        fprintf(stderr, "ERROR: Main compression thread not done\n");
-        goto out;
-    }*/
     
     if((retResult = wait_for_finish(t_diff)) != SSTRM_DONE) {
         fprintf(stderr, "ERROR: Stream compress thread not done\n");
