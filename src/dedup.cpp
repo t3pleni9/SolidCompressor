@@ -187,7 +187,9 @@ unsigned long int DeDup::deDuplicate(char *buffer, char **outBuffer, unsigned lo
          //Copying index into the buffer
         if(c) {
             indexOffset += Index::writeIndex((*outBuffer)); 
-        }    
+        } else {
+            Index::clearIndex();
+        }
         //Copying index into the buffer
           
             

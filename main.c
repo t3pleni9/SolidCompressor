@@ -8,14 +8,13 @@
 int main(int argc, char **argv) {
         clock_t begin, end;
         double time_spent;
-        
         FILE *inFile, *outFile;
         #if COMP == 1
-        inFile = fopen("/home/justin/bzip2-1.0.6.tar", "rb");
-        outFile = fopen("/home/justin/temp.out.bz2", "wb");
+        inFile = fopen("/media/disk1/testData.tar", "rb");
+        outFile = fopen("/media/disk1/testData.tar.gz", "wb");
         #else
-        inFile = fopen("/home/justin/temp.out.bz2", "rb");
-        outFile = fopen("/home/justin/bzip2out.tar", "wb");
+        inFile = fopen("/media/disk1/testData.tar.gz", "rb");
+        outFile = fopen("/media/disk1/testData.out.tar", "wb");
         #endif
         if(inFile) {
             begin = clock();
@@ -30,6 +29,5 @@ int main(int argc, char **argv) {
         }
         fclose(inFile);
         fclose(outFile);
-        
         return 1;
 }

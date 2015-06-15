@@ -1,5 +1,5 @@
 /*
- * delta.h
+ * delta.c
  * 
  * Copyright 2015 Justin Jose <justinjose999@gmail.com>
  * 
@@ -23,6 +23,8 @@
 
 
 #include "diff.h"
+
+#define TENPER(x) (x/10)
 
 typedef struct t_min_ds{
     int start;
@@ -356,20 +358,29 @@ void * loop_thread(void *args_) {
     int     i           = 0;
     NODESP  node_array  = lp->mXn.node_array;
     int     j;
+    int     *sim_count  = (int *)malloc (sizeof(int));
+    int     j_check     = 0;
+    int     increment   = 0;
+    int     cur_sim_cnt = 0;
     
     clock_t begin, end;
-        double time_spent = 0;
+    double time_spent = 0;
         
-        begin = clock();
+    begin = clock();
+    *sim_count = 0;
     /*if(i_val >= lp->mXn.start && i_val <= lp->mXn.end) {
         fprintf(stderr, "Self comparrison error. i_val in [start, end]\n");
         pthread_exit(NULL);
      }*/
     
     for(i = lp->mXn.start; i < lp->mXn.end; i++) {
+         j_check = i + TENPER(i_val);
+         increment = j_check;
         for(j = i+1; j < i_val; j++) {
             sim = fuzzy_compare(node_array[i].fuzzy_hash_result, node_array[j].fuzzy_hash_result);
             if(sim >= DIFF_THLD) {
+                (*sim_count)++;
+                cur_sim_cnt++;
                 pthread_mutex_lock(&node_array[j].mutex);
                 
                 if(node_array[j].sim < sim ) {
@@ -379,13 +390,25 @@ void * loop_thread(void *args_) {
                 
                 pthread_mutex_unlock(&node_array[j].mutex);
             }
+            
+            if(j == j_check) {
+                if(cur_sim_cnt <= (i_val / 1000)) {
+                    j += increment;   
+                    increment += TENPER(i_val);
+                    cur_sim_cnt = 0;                
+                } else {
+                    increment /= 2;
+                }
+                
+                j_check = (j + TENPER(i_val));
+            }
         }
     }
     end = clock();
     time_spent = (double)(end - begin) / CLOCKS_PER_SEC;
     fprintf(stderr, "finished: %d %f\n", lp->mXn.end, time_spent);
     if(lp) free(lp);
-    pthread_exit(node_array);
+    pthread_exit(sim_count);
 }
 
 static int create_delta_graph(NODESP node_array, int block) {
@@ -395,6 +418,7 @@ static int create_delta_graph(NODESP node_array, int block) {
     int         j_counter    = 0;
     void        *exit_status = NULL;
     int         percDiv[8]   = { 13,17,20,55 };
+    int         goodness     = 0;
     //for(i = 0; i < block; i++) { 
         
         j_counter           = 0;
@@ -429,13 +453,16 @@ static int create_delta_graph(NODESP node_array, int block) {
             if(!exit_status) {
                 fprintf (stderr, "FATAL ERROR: Inner thread error!\n");
                 exit (1);
-            } 
+            } else {
+                goodness += *((int *)exit_status);
+                free(exit_status);
+            }
         }
     //}
     
     if(thread) free(thread);
     
-    return 1;
+    return goodness;
 }
 
 static diff_result do_diff_fd_mst(char *inBuffer, int out_fd, size_t inLen, size_t *out_len, pthread_t* t_diff) {
@@ -487,8 +514,9 @@ static diff_result do_diff_fd_mst(char *inBuffer, int out_fd, size_t inLen, size
         double time_spent = 0, tim2 = 0;
         
         begin = clock();
-        create_delta_graph(node_array, blockCount);
+        int goodness = create_delta_graph(node_array, blockCount);
         end = clock();
+        fprintf(stderr, "goodness = %d\n", goodness);
         time_spent = (double)(end - begin) / CLOCKS_PER_SEC;
         fprintf(stderr, "Create Graph time: %f\n", time_spent);
         //time_spent = 0;

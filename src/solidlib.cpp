@@ -34,7 +34,7 @@ pthread_mutex_t lock;
 ulInt netIn         = 0;
 ulInt netOut        = 0;
 
-MODALGO _scompressor_  = BZIPC;
+MODALGO _scompressor_  = ZLIBC;
 MODALGO _delta_        = ZMSTD;
 MODALGO _duplicator_   = LZDDP;
 
@@ -342,7 +342,7 @@ SOLID_RESULT solid_compress_fd(int in_fd, int dump_fd) {
         retResult = STH_ERROR;
         goto out;
     }
-    fprintf(stderr, "fdout : %d\n", pipefd[1]);
+    
     if((retResult = _solid_compress_fd(in_fd, pipefd[1])) != S_DONE) {
         fprintf(stderr, "ERROR: Main compression thread not done\n");
         goto out;
