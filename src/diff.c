@@ -45,6 +45,15 @@ typedef struct t_looper {
 typedef looper* LPTR;
 
 
+
+char *streamHandleBuffer = NULL;
+
+__attribute__((destructor)) void unmapBuffer() {
+    if(__diffBuffer__) munmap(__diffBuffer__, SEG_S + 20);
+    if(streamHandleBuffer) munmap(streamHandleBuffer, SEG_S + 20);
+}
+
+
 static NODESP build_node_buffer(char *node_buffer, size_t *_offset_) {
     
     if(!node_buffer)
@@ -322,13 +331,19 @@ static diff_result do_diff_fd(char *inBuffer, int out_fd, size_t inLen, size_t *
 }
 
 void * stream_buff_handle(void *_args) {
+    if ((streamHandleBuffer = (char *)mmap ((caddr_t)0, SEG_S + 20, PROT_READ | PROT_WRITE,
+        MAP_SHARED|MAP_ANONYMOUS , -1, 0)) == (caddr_t) -1){
+        fprintf (stderr, "Error: Unable to allocate memory pages, DEDUP.STRMBUFF\n");
+        exit(1);
+    }
     SOLID_DATA buffer = (SOLID_DATA)_args;
-    buffer->in_buffer = (char *)malloc(SEG_S * sizeof(char));
+    buffer->in_buffer = streamHandleBuffer;
+    buffer->in_len = 0;
     int readed = 0;
     while(1) {
         readed = fill_buffer(buffer, SEG_S);
         if( readed < 0) {
-            fprintf(stderr, "Error: failed to read stream");
+            fprintf(stderr, "Error: failed to read stream in streamBuffer %s\n",strerror(-readed));
             buffer->end_result = SPIPE_ERROR;
             break;
         } else if(!buffer->in_len) { 
@@ -346,7 +361,9 @@ void * stream_buff_handle(void *_args) {
         }
         fprintf(stderr, "Done writing %d\n", buffer->in_len);
     } 
-    if(buffer->in_buffer)   free(buffer->in_buffer);
+    
+    if(buffer->in_buffer)   buffer->in_buffer = NULL;
+    if(streamHandleBuffer) munmap(streamHandleBuffer, SEG_S + 20);
     pthread_exit(&buffer->end_result);    
 }
 
@@ -391,7 +408,7 @@ void * loop_thread(void *args_) {
                 pthread_mutex_unlock(&node_array[j].mutex);
             }
             
-            if(j == j_check) {
+           /* if(j == j_check) {
                 if(cur_sim_cnt <= (i_val / 1000)) {
                     j += increment;   
                     increment += TENPER(i_val);
@@ -401,7 +418,7 @@ void * loop_thread(void *args_) {
                 }
                 
                 j_check = (j + TENPER(i_val));
-            }
+            }*/
         }
     }
     end = clock();
@@ -694,9 +711,9 @@ static diff_result do_patch_fd(SOLID_DATA buffer) {
                 	: node_array[node_count-1]->node_size
         	);
             
-            if(buffer->out_buffer)	free(buffer->out_buffer);
+            if(buffer->out_buffer)	buffer->out_buffer = NULL;//free(buffer->out_buffer);
             
-            buffer->out_buffer 	= (char *) malloc(buffer->out_len);
+            buffer->out_buffer 	= __diffBuffer__;//(char *) malloc(buffer->out_len);
             int i 				= 0; 
             int offset 			= 0;
             
@@ -770,9 +787,9 @@ static diff_result do_patch_fd(SOLID_DATA buffer) {
                     	: node_array[node_count-1]->node_size
             	);
                 
-                if(buffer->out_buffer)	free(buffer->out_buffer);
+                if(buffer->out_buffer)	buffer->out_buffer = NULL;
                 
-                buffer->out_buffer	= 	(char *) malloc(buffer->out_len);
+                buffer->out_buffer	= 	__diffBuffer__;//(char *) malloc(buffer->out_len);
                 int i 				= 	0; 
                 int offset 			= 	0;
                 
@@ -848,7 +865,9 @@ SOLID_RESULT zdelta_diff(void* _args) {
     return buffer->end_result;
 }
 
-SOLID_RESULT zmst_diff(void* _args) {    
+SOLID_RESULT zmst_diff(void* _args) {  
+    printf ("diff: %d\n", SEG_S);  
+    int fdout;
     diff_result diff;
     static int i = 0;
     clock_t begin, end;
@@ -860,12 +879,12 @@ SOLID_RESULT zmst_diff(void* _args) {
         
     while(1){
         int ret = read( buffer->fd.in, (char *)&(buffer->in_len), sizeof(buffer->in_len));
-        if(buffer->in_buffer)   free(buffer->in_buffer);
-        buffer->in_buffer = (char *)malloc(buffer->in_len * sizeof(char));
+        if(buffer->in_buffer)   /*free(*/buffer->in_buffer/*);/*/ = NULL;
         
+        buffer->in_buffer = __diffBuffer__;//(char *)malloc(buffer->in_len * sizeof(char));//
         ret = fill_buffer(buffer, buffer->in_len);
         if( ret < 0) {
-            fprintf(stderr, "Error: failed to read stream");
+            fprintf(stderr, "Error: failed to read stream in zmst_diff\n");
             buffer->end_result = SPIPE_ERROR;
             goto out;
         } else if(!buffer->in_len) {  
@@ -903,7 +922,6 @@ out:
         fprintf(stderr, "ERROR: Diff thread not done\n");
         buffer->end_result = retResult;
     }
-    if(buffer->in_buffer)
-        free(buffer->in_buffer);
+    if(buffer->in_buffer) buffer->in_buffer = NULL;
     return buffer->end_result;
 }

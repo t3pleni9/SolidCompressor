@@ -14,6 +14,16 @@ extern "C" {
 char errorMsg[100];
 int dfd = 0;
 int ifd = 0;
+unsigned int compressionLevel = 47;
+unsigned short degree = 10;
+//const unsigned int SEG_S = 550000000;
+
+unsigned int generateHeader() {
+    
+
+
+}
+unsigned int retrieveHeader(unsigned int headerWord);
 
 extern int write_buf(int fd, const void *buf, int size) {
 	int ret;
@@ -39,7 +49,6 @@ extern int write_buf(int fd, const void *buf, int size) {
     out:
         if(fd == dfd) 
             netOut += size;
-            //fprintf(stderr, "AMT: %d\n", pos);
         return pos;
 }
 
@@ -65,16 +74,6 @@ extern int refill_buffer(SOLID_DATA buffer, size_t buf_len) {
 extern int fill_buffer(SOLID_DATA buffer, size_t buf_len) {
     buffer->in_len = 0;
     int readed = refill_buffer(buffer, buf_len);
-    /*int readed = 0;
-    do {
-        readed = read( buffer->fd.in, (buffer->in_buffer + buffer->in_len), buf_len - buffer->in_len);
-        if(readed <= 0) {
-            return readed;
-        } else {
-            buffer->in_len += readed;
-        }
-    } while(buffer->in_len < buf_len);
-    */
     return readed;
 
 }

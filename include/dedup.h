@@ -59,11 +59,9 @@
  **/
 #define BLOCK_N 1000000
 
+extern char *__outBuffer__;
+extern char *__tempBuffer__;
 
-/**
- * @brief 
- * Block hash with the index header. 
- */
 #ifdef __cplusplus
 
 class DeDup

@@ -43,6 +43,8 @@
 extern "C" {
 #endif
 
+extern unsigned short degree;
+extern char *__diffBuffer__;
 extern char errorMsg[100];
 
 typedef struct{
@@ -78,7 +80,7 @@ typedef enum{
     DIFF_THRD_ERROR = 10
 } diff_result;
 
-#define DIFF_BLOCK 50000
+#define DIFF_BLOCK (SEG_S/4000)
 #define MAX_DIFF_BLOCK ((SEG_S / DIFF_BLOCK) + 10)
 #define PATCH_BLOCK (DIFF_BLOCK + sizeof(int) + sizeof(size_t))
 #define DIFF_THLD 10
@@ -88,8 +90,6 @@ typedef enum{
 SOLID_RESULT zdelta_diff(void* _args);
 SOLID_RESULT zmst_diff(void* _args);
 SOLID_RESULT zdelta_patch(void* _args);
-
-//diff_result _do_patch(char *deltaBuffer, char *baseBuffer, char **patchBuffer, size_t deltaLen, size_t baseLen, size_t *patchLen);
 
 #ifdef __cplusplus
 }

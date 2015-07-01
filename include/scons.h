@@ -25,6 +25,11 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <pthread.h>
+#include <sys/mman.h> /* mmap() is defined in this header */
+#include <fcntl.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+
  
 #ifndef __SCONS_H
 #define __SCONS_H
@@ -33,10 +38,11 @@
 extern "C" {
 #endif
 
+extern unsigned int SEG_S;
 
-#ifndef SEG_S
-#define SEG_S 200000000
-#endif
+/*#ifndef SEG_S
+#define SEG_S 550000000
+#endif*/
 
 #ifndef CHUNK
 #define CHUNK 3800
@@ -44,42 +50,56 @@ extern "C" {
 
 #define PIPE_SEG 50000
 
-extern char scompressor;
-extern char delta;
-extern char duplicator;
 
 typedef unsigned long int ulInt;
 
+/*
+ * |     --4 bits--  |  -2 bits-  |  -2 bits-  |
+ * |SEG_S value in   | Delta comp.| Stream comp|
+ * |Nx100 MB         | level      | level      |
+ *
+ * Segment Size: N x 100 MB. Default 2. N*6 < ulimit -u
+ * Delta compression level : 0, 1, 2, 3: 0 - fastest, least. 3 - slowest, best. Default: 3
+ * Stream compression level: 0, 1, 2, 3: 0 - fastest, least. 3 - slowest, best. Default: 3
+ */
+extern unsigned int compressionLevel;
 
 
-/* 
+/*  
  * Add more as pluggins. 
  * Make sure compressor is placed first 
- * and decompressor is (100 + compressor) 
+ * and decompressor is (10 + compressor) 
  * Add cases in _s_init for custom added enums.
  * 
  */
 typedef enum {
     
-    ZLIBC = 101, //Stream compressor
-    BZIPC = 102,
-    _7Z_C = 103,
+    /*
+     * Max allowed 8 bit ( < 256)
+     * Group 1 & 2 : Stream compressor
+     * Group 3 & 4 : Delta compressor
+     * Group 5 & 6: De-duplication algorithms
+     */
+    
+    ZLIBC = 11, //Stream compressor
+    BZIPC = 12,
+    _7Z_C = 13,
 
-    ZLIBD = 201, //Stream de-compressor
-    BZIPD = 202,
-    _7Z_D = 203,
+    ZLIBD = 21, //Stream de-compressor
+    BZIPD = 22,
+    _7Z_D = 23,
     
-    ZDLTA = 301, // Delta compressor - diff
-    ZMSTD = 302,
+    ZDLTA = 31, // Delta compressor - diff
+    ZMSTD = 32,
     
-    ZDPAT = 401, // Delta compressor - patch
-    ZMSTP = 402,
+    ZDPAT = 41, // Delta compressor - patch
+    ZMSTP = 42,
     
-    LZDDP = 501, // Deduplicator 
+    LZDDP = 51, // Deduplicator 
     
-    LZDUP = 601 // Duplicator
+    LZDUP = 61 // Duplicator
 } MODALGO;
-    
+
 
 typedef enum {
     S_NULL = 0,
@@ -139,6 +159,8 @@ typedef struct {
 }t_solid_data;
 
 typedef t_solid_data* SOLID_DATA;
+
+
 
 int write_buf(int fd, const void *buf, int size);
 int fill_buffer(SOLID_DATA buffer, size_t buf_len);

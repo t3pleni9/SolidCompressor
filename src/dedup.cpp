@@ -35,6 +35,11 @@
 #include <unistd.h>
 
 
+__attribute__((destructor)) void unmapdedupBuffer() {
+    if(__outBuffer__) munmap(__outBuffer__, SEG_S + 20);
+    if(__tempBuffer__) munmap(__tempBuffer__, SEG_S + 20);  
+}
+
 
 DeDup::DeDup()
 {
@@ -98,12 +103,15 @@ unsigned long int DeDup::deDuplicate(char *buffer, char **outBuffer, unsigned lo
     bool exists = false;    
     const int inc = BLOCK_S / BLOCK_X;
     int bufferSize = 0;
-    char *tempBuff = new char[SEG_S];
+    char *tempBuff = NULL;// = new char[SEG_S];
     unsigned long int segLength = seg_s;
     unsigned long int curPointer = 0;
     unsigned long int indexOffset = 0;
     unsigned long int fileSize = 0;
-    
+    if ((__tempBuffer__ = (char *)mmap ((caddr_t)0, SEG_S + 20, PROT_READ | PROT_WRITE,
+   MAP_SHARED|MAP_ANONYMOUS , -1, 0)) == (caddr_t) -1)
+        fprintf (stderr, "mmap error for deDupBuffer\n");
+    tempBuff = __tempBuffer__;
     if (tempBuff) {        
         while(segLength > 0) {            
             if(BLOCK_S < segLength) {
@@ -178,9 +186,7 @@ unsigned long int DeDup::deDuplicate(char *buffer, char **outBuffer, unsigned lo
         unsigned long int retSize = sizeof(c) + (c ? ((Index::getHeaderIndexCount() * sizeof(IndexHeader)) + 
             sizeof(unsigned int)) : 0)  + sizeof(unsigned long int) + (c ? fileSize : seg_s);
         
-        *outBuffer = (char *) malloc(retSize * sizeof(char));
-        
-        
+        *outBuffer = __outBuffer__;//(char *) malloc(retSize * sizeof(char));
         memcpy(((*outBuffer) + indexOffset), (char*)&(c), sizeof(c));
         indexOffset += sizeof(c);
         
@@ -192,14 +198,17 @@ unsigned long int DeDup::deDuplicate(char *buffer, char **outBuffer, unsigned lo
         }
         //Copying index into the buffer
           
-            
+         
         //Copying size into the buffer
         memcpy(((*outBuffer) + indexOffset), (char*)&(seg_s), sizeof(unsigned long int));
         indexOffset += sizeof(unsigned long int);
-        
         //Copy compressed data into buffer
         memcpy(((*outBuffer) + indexOffset), (c ? tempBuff : buffer), (c ? fileSize : seg_s));
-        delete[] tempBuff;
+        //delete[] tempBuff;
+         
+        tempBuff = NULL;
+        if(__tempBuffer__) munmap(__tempBuffer__, SEG_S + 20);
+        
         return retSize == ((c ? fileSize : seg_s) + indexOffset) ? retSize : 0;
     }
     
@@ -209,7 +218,7 @@ unsigned long int DeDup::deDuplicate(char *buffer, char **outBuffer, unsigned lo
 SOLID_RESULT DeDup::duplicate(SOLID_DATA de_buffer) {
     char *ddBuffer = de_buffer->out_buffer;
     char *inBuffer;
-    char *buffer = (char *)malloc(SEG_S);
+    char *buffer = __outBuffer__;//(char *)malloc(SEG_S);
     Index temp;
     unsigned int offset = 0;
     int ret = 0;
@@ -238,7 +247,7 @@ SOLID_RESULT DeDup::duplicate(SOLID_DATA de_buffer) {
                 return SPIPE_ERROR;
             }
             
-            free(buffer);
+            buffer = NULL;
             return SDUP_DONE;
         }
             
@@ -278,7 +287,7 @@ SOLID_RESULT DeDup::duplicate(SOLID_DATA de_buffer) {
             return SPIPE_ERROR;
         }
         
-        if(buffer) delete[] buffer;
+        if(buffer) buffer = NULL;
         Index::clearIndex();
        
         return SDUP_DONE;        
@@ -288,6 +297,7 @@ SOLID_RESULT DeDup::duplicate(SOLID_DATA de_buffer) {
 }
 
 void * de_dup(void* _args) {
+    printf ("dedup: %d\n", SEG_S);
     static int i = 0;
     clock_t begin, end;
     double time_spent;
@@ -310,10 +320,10 @@ void *duplicate(void* _args) {
     SOLID_DATA buffer = (SOLID_DATA) _args;
     
     buffer->end_result = deDup.duplicate(buffer);
-    /*if(buffer->out_len) 
+    if(buffer->out_len) 
        fprintf(stderr, "Done dedup %d %d\n", buffer->in_len, buffer->out_len);
     else 
-       fprintf(stderr, "out len is null\n");*/
+       fprintf(stderr, "out len is null\n");
     pthread_exit(&buffer->end_result);
 }
         

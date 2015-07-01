@@ -27,50 +27,58 @@
 #include "diff.h"
 #include "streamc.h"
 #include "solidlib.h"
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <sys/mman.h> /* mmap() is defined in this header */
+#include <fcntl.h>
+#include <unistd.h>
 
 
 pthread_mutex_t lock;
 
-ulInt netIn         = 0;
-ulInt netOut        = 0;
+extern int dfd;
+extern int ifd;
+
+ulInt netIn     = 0;
+ulInt netOut    = 0;
+
+
+unsigned int    SEG_S                   = 200000000;
+unsigned short  segment_pre_multiplier  = 3;
+
+char *__deDupBuffer__ = NULL;
+char *__outBuffer__   = NULL;
+char *__tempBuffer__  = NULL;
+char *__diffBuffer__  = NULL;
 
 MODALGO _scompressor_  = ZLIBC;
 MODALGO _delta_        = ZMSTD;
 MODALGO _duplicator_   = LZDDP;
 
-extern int dfd;
-extern int ifd;
+__attribute__((destructor)) void unmaplibBuffer() {
+    if(__deDupBuffer__) munmap(__deDupBuffer__, SEG_S + 20);
+}
+
+/*
+ * |-------segment size (4 bits)-------| delta compression (2 bit) | stream compression 2 bit| 0xff000000
+ * |-------------------------stream compressor algorithm 8 bits------------------------------| 0x00ff0000
+ * |-------------------------Delta compressor algorithm 8 bits ------------------------------| 0x0000ff00
+ * |-------------------------De duplication algorithm 8 bits   ------------------------------| 0x000000ff
+ */
+unsigned int generateHeader() {
+    unsigned int header = 0;
+    
+
+}
+unsigned int retrieveHeader(unsigned int headerWord);
 
 static void printStats() {
-    /*char in[10], out[10];
-    ulInt sizes[] = {1, 1000, 1000000, 1000000000 };
-    char post[5] = {"BKMG"};
-    int i = 0;
-    if(netIn) {
-        for(;i<4;i++) {
-            if(netIn < sizes[i]) {
-                sprintf(in, "%.02f%c", (double)netIn / sizes[i-1], post[i-1]);
-                break;
-            }
-        }
-    } else {
-        sprintf(in, "%luB", netIn);
-    }
-    if(netOut) {
-        for(i = 0;i<4;i++) {
-            if(netOut < sizes[i]) {
-                sprintf(out, "%.02f%c", (double)netOut / sizes[i-1], post[i-1]);
-                break;
-            }
-        }
-    } else {
-        sprintf(in, "%luB", netOut);
-    }*/
-    
     fprintf(stderr, "Net IN: %lu Net OUT: %lu\n", netIn, netOut);
 }
 
 static SOLID_RESULT _set_header(int out_fd) {
+    
+    generateHeader();
     int ret = 0;
     if((ret = write_buf(out_fd, (char *)&_scompressor_, sizeof(_scompressor_))) < 0) goto error;
     if((ret = write_buf(out_fd, (char *)&_delta_, sizeof(_delta_))) < 0) goto error;
@@ -90,19 +98,19 @@ static SOLID_RESULT _get_header(int in_fd) {
         fprintf(stderr, "ERROR: Unable to get file header.\n");
         return S_NULL;
     } else {
-        _scompressor_ = (MODALGO)((int)inC + 100);
+        _scompressor_ = (MODALGO)((int)inC + 10);
     }
     if((readed = read( in_fd, (char *)&inC, sizeof(inC))) < 0) {
         fprintf(stderr, "ERROR: Unable to get file header.\n");
         return S_NULL;
     } else {
-        _delta_ = (MODALGO)((int)inC + 100);
+        _delta_ = (MODALGO)((int)inC + 10);
     }
     if((readed = read( in_fd, (char *)&inC, sizeof(inC))) < 0) {
         fprintf(stderr, "ERROR: Unable to get file header.\n");
         return S_NULL;
     } else {
-        _duplicator_ = (MODALGO)((int)inC + 100);
+        _duplicator_ = (MODALGO)((int)inC + 10);
     }
     
     return S_DONE;
@@ -154,25 +162,6 @@ static void * _s_init(SOLID_DATA *buffer) {
     
     return (void *)(*buffer);
 }
-/*void test_node() {
-    SOLID_DATA node1 = (SOLID_DATA)malloc(sizeof(t_solid_data));
-    
-    char temp[] = "Hello I am dodo.";
-    char temp2[] = "Booo you brutus";
-    node1->in_buffer = (char *)malloc(strlen(temp));
-    memcpy(node1->in_buffer, temp, strlen(temp));
-    node1->in_len = strlen(temp);
-    node1->out_buffer = temp2;
-    node1->out_len = strlen(temp2);
-    node1->id = 23;
-    node1->fd.in = 1;
-    node1->fd.out = 2;
-    compQueue.push(node1);
-    t_solid_data node2 = *((SOLID_DATA)compQueue.pop());
-    printf("InB: %s Len: %d OutB: %s Len: %d Id: %d FdIn: %d FdOut: %d\n", node2.in_buffer, node2.in_len, node2.out_buffer, node2.out_len, node2.id, node2.fd.in, node2.fd.out);
-}*/
-
-
 
 void *diff_pipe(void *_args) {    
     SOLID_DATA buffer = (SOLID_DATA)_args;    
@@ -182,7 +171,6 @@ void *diff_pipe(void *_args) {
 }
 
 SOLID_RESULT _solid_compress_fd(int in_fd, int out_fd) {
-    
     SOLID_DATA      de_dup_buffer;    
     SOLID_DATA      diff_buffer;     
      
@@ -192,6 +180,10 @@ SOLID_RESULT _solid_compress_fd(int in_fd, int out_fd) {
     int first_run   = 1;
     
     pthread_t t_diff;
+    if ((__deDupBuffer__ = (char *)mmap (
+        (caddr_t)0, SEG_S + 20, PROT_READ | PROT_WRITE,MAP_SHARED|MAP_ANONYMOUS , -1, 0)
+        ) == (caddr_t) -1)
+        fprintf (stderr, "mmap error for deDupBuffer\n");
     
      /*Initialize buffers and function pointers */
     if(_s_init(&de_dup_buffer) == NULL) {
@@ -231,27 +223,24 @@ SOLID_RESULT _solid_compress_fd(int in_fd, int out_fd) {
     }
     
     while(1) {
-        de_dup_buffer->in_buffer = (char *) malloc(SEG_S);
+        
+        if(de_dup_buffer->in_buffer)  de_dup_buffer->in_buffer = NULL;
+        de_dup_buffer->in_buffer = __deDupBuffer__;
+        de_dup_buffer->in_len = 0;
+        
         int readed = fill_buffer(de_dup_buffer, SEG_S);
 
         if( readed < 0) {
-            fprintf(stderr, "Error: failed to read stream");
+            fprintf(stderr, "Error: failed to read stream, %s\n",  strerror(errno));
             return SPIPE_ERROR;
         } else if(!de_dup_buffer->in_len) {  
-            if(!first_run) {
-                
-            }
-                         
             ret         = 0;
             retResult   = S_DONE;
-            goto out;             
+            goto out;
+                         
         } else {
             de_dup_buffer->out_buffer = NULL;
             if(*((SOLID_RESULT *)(de_dup_buffer->dupcomp)(de_dup_buffer)) == SDEDUP_DONE) {
-                if(!first_run) {                        
-                                          
-                }
-                
                 ret = write_buf(de_dup_buffer->fd.out, (char *)&(de_dup_buffer->out_len), sizeof(de_dup_buffer->out_len));
                 if (ret < 0) {
                     close(out_fd);
@@ -268,15 +257,10 @@ SOLID_RESULT _solid_compress_fd(int in_fd, int out_fd) {
                     goto out;
                 }
                 
-                if(de_dup_buffer->in_buffer)    free(de_dup_buffer->in_buffer);                    
-                if(de_dup_buffer->out_buffer)   free(de_dup_buffer->out_buffer);
-                
                 de_dup_buffer->out_buffer   = NULL;
                 de_dup_buffer->in_buffer    = NULL;
                 de_dup_buffer->in_len       = 0;
                 de_dup_buffer->out_len      = 0;
-                
-                
                 
                 first_run = 0;
             }
@@ -295,14 +279,13 @@ SOLID_RESULT _solid_compress_fd(int in_fd, int out_fd) {
         if (pipefd[0] != -1)
             close(pipefd[0]); 
         close(out_fd);
-        if(de_dup_buffer->in_buffer)
-            free(de_dup_buffer->in_buffer);
+        if(de_dup_buffer->in_buffer) de_dup_buffer->in_buffer = NULL;
         if(de_dup_buffer->out_buffer)
             free(de_dup_buffer->out_buffer);           
         if(de_dup_buffer)
             free(de_dup_buffer);
         pthread_mutex_destroy(&lock);
-       
+        if(__deDupBuffer__) munmap(__deDupBuffer__, SEG_S + 20);
         printStats();
         return retResult;
 
@@ -311,6 +294,8 @@ SOLID_RESULT _solid_compress_fd(int in_fd, int out_fd) {
 SOLID_RESULT solid_compress_fd(int in_fd, int dump_fd) {
     dfd = dump_fd;
     ifd = in_fd;
+    
+    //SEG_S = segment_pre_multiplier * 100000000;
     int pipefd[2]   = {-1, -1};
     pthread_t t_diff;
     SOLID_DATA buffer;
@@ -328,6 +313,17 @@ SOLID_RESULT solid_compress_fd(int in_fd, int dump_fd) {
         return S_NULL;
     }
     
+    if ((__outBuffer__ = (char *)mmap ((caddr_t)0, SEG_S + 20, PROT_READ | PROT_WRITE,
+   MAP_SHARED|MAP_ANONYMOUS , -1, 0)) == (caddr_t) -1) {
+        fprintf (stderr, "Error: Unable to allocate memory pages, DEDUP\n");
+        exit(1);
+    }
+    
+    if ((__diffBuffer__ = (char *)mmap ((caddr_t)0, SEG_S + 20, PROT_READ | PROT_WRITE,
+   MAP_SHARED|MAP_ANONYMOUS , -1, 0)) == (caddr_t) -1) {
+        fprintf (stderr, "Error: Unable to allocate memory pages, DELTA\n");
+        exit(1);
+    }
     
     buffer->fd.out = dump_fd;
     buffer->fd.in  = pipefd[0];
@@ -356,6 +352,8 @@ SOLID_RESULT solid_compress_fd(int in_fd, int dump_fd) {
     free(buffer);
     if (pipefd[0] != -1)
         close(pipefd[0]); 
+    if(__outBuffer__) munmap(__outBuffer__, SEG_S + 20); 
+    if(__diffBuffer__) munmap(__diffBuffer__, SEG_S + 20);
     return retResult;
 
 }
@@ -387,13 +385,23 @@ SOLID_RESULT solid_de_compress_fd(int in_fd, int out_fd) {
         return S_NULL;
     }
     
+    if ((__outBuffer__ = (char *)mmap ((caddr_t)0, SEG_S + 20, PROT_READ | PROT_WRITE,
+   MAP_SHARED|MAP_ANONYMOUS , -1, 0)) == (caddr_t) -1) {
+        fprintf (stderr, "Error: Unable to allocate memory pages, DEDUP\n");
+        exit(1);
+    }
+    
+    if ((__diffBuffer__ = (char *)mmap ((caddr_t)0, SEG_S + 20, PROT_READ | PROT_WRITE,
+   MAP_SHARED|MAP_ANONYMOUS , -1, 0)) == (caddr_t) -1) {
+        fprintf (stderr, "Error: Unable to allocate memory pages, DELTA\n");
+        exit(1);
+    }
+    
     buffer->fd.in = in_fd;
     buffer->fd.out  = pipefd[1];
     
     diff_buffer->fd.in = pipefd[0];
     diff_buffer->fd.out = out_fd;
-    
-    
     
     ret = pthread_create(&t_diff, NULL, buffer->scomp, buffer);                
     if (ret) {
@@ -406,7 +414,6 @@ SOLID_RESULT solid_de_compress_fd(int in_fd, int out_fd) {
     
     (buffer->dcomp)(diff_buffer);
     
-    
     if((retResult = wait_for_finish(t_diff)) != SSTRM_DONE) {
         fprintf(stderr, "ERROR: Stream compress thread not done\n");
         goto out;
@@ -416,6 +423,8 @@ SOLID_RESULT solid_de_compress_fd(int in_fd, int out_fd) {
     if (pipefd[0] != -1)
         close(pipefd[0]);
     close(out_fd); 
+    if(__outBuffer__) munmap(__outBuffer__, SEG_S + 20);
+    if(__diffBuffer__) munmap(__diffBuffer__, SEG_S + 20);
     printStats();
     return retResult;
 
@@ -429,37 +438,3 @@ void *solid_de_comp_thread(void *args_) {
 	close(fd->out);
 	pthread_exit(&buffer->end_result);
 }
-	
-/*SOLID_RESULT solid_compress(char* inbuffer, char *outbuffer, size_t in_len, size_t * out_len) {
-    
-    t_solid_data buffer;
-    buffer.in_buffer = inbuffer; 
-    buffer.out_buffer = outbuffer; // NULL buffer
-    buffer.in_len = in_len;
-    t_solid_data diff_buffer, strm_buffer;
-    DeDup deDup;
-    if(deDup.de_dup(&buffer) == SDEDUP_DONE) {
-        if(buffer.out_len) 
-        printf("Done dedup %d %d\n", buffer.in_len,buffer.out_len);
-        else 
-        printf("out len is null\n");
-        diff_buffer.in_buffer = buffer.out_buffer;
-        diff_buffer.out_buffer = NULL;
-        diff_buffer.in_len = buffer.out_len;
-        diff_buffer.fd.in = -1;
-        diff_buffer.fd.out = -1;
-       // memcpy(buffer.in_buffer, buffer.out_buffer, buffer.out_len);
-        SOLID_RESULT result = zdelta_diff(&diff_buffer);
-        printf("Diff done %d %d\n", diff_buffer.in_len, diff_buffer.out_len);
-        strm_buffer.in_buffer = diff_buffer.out_buffer;
-        strm_buffer.out_buffer = outbuffer;
-        strm_buffer.in_len = diff_buffer.out_len;
-        strm_buffer.fd.out = -1;
-        strm_buffer.fd.in = -1;
-        result = (strm_buffer.scomp)(&strm_buffer);
-        *out_len = strm_buffer.out_len;
-        return result;
-    } else {
-        return SDEDUP_ERROR;
-    }
-}*/
