@@ -316,6 +316,7 @@ void * de_dup(void* _args) {
 }
 
 void *duplicate(void* _args) {
+    printf ("dedup: %d\n", SEG_S);
     DeDup deDup;
     SOLID_DATA buffer = (SOLID_DATA) _args;
     

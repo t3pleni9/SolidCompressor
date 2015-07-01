@@ -37,7 +37,7 @@
 extern "C" {
 #endif
 
-extern int level;
+extern unsigned short level;
 extern char errorMsg[100];
 
 void* zlib_compress(void* _args);

@@ -24,7 +24,7 @@
 
 #include "streamc.h"
 
-int level =9;
+//int level =9;
 
 static SOLID_RESULT _bzip2_decompress(int fd_in, int fd_out) {
         level = 9;

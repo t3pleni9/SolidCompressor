@@ -43,7 +43,6 @@
 extern "C" {
 #endif
 
-extern unsigned short degree;
 extern char *__diffBuffer__;
 extern char errorMsg[100];
 

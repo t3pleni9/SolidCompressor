@@ -15,7 +15,7 @@ char errorMsg[100];
 int dfd = 0;
 int ifd = 0;
 unsigned int compressionLevel = 47;
-unsigned short degree = 10;
+
 //const unsigned int SEG_S = 550000000;
 
 unsigned int generateHeader() {
