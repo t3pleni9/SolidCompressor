@@ -35,6 +35,8 @@
 #include <unistd.h>
 
 
+char *__tempBuffer__  = NULL;
+
 __attribute__((destructor)) void unmapdedupBuffer() {
     if(__outBuffer__) munmap(__outBuffer__, SEG_S + 20);
     if(__tempBuffer__) munmap(__tempBuffer__, SEG_S + 20);  

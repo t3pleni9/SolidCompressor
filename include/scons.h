@@ -62,7 +62,7 @@ typedef unsigned long int ulInt;
  * Delta compression level : 0, 1, 2, 3: 0 - fastest, least. 3 - slowest, best. Default: 3
  * Stream compression level: 0, 1, 2, 3: 0 - fastest, least. 3 - slowest, best. Default: 3
  */
-extern unsigned int compressionLevel;
+extern unsigned short level;
 
 
 /*  
@@ -78,26 +78,34 @@ typedef enum {
      * Max allowed 8 bit ( < 256)
      * Group 1 & 2 : Stream compressor
      * Group 3 & 4 : Delta compressor
-     * Group 5 & 6: De-duplication algorithms
+     * Group 5 & 6 : De-duplication algorithms
+     */
+     
+    DEFLT = 0, // Default to specify the default library choice in any category.
+    /* 
+     * Default values: 
+     * Stream Compressor : ZLIB_
+     * Delta  Compressor : ZMST_
+     * De duplicator     : LZD_P
      */
     
-    ZLIBC = 11, //Stream compressor
+    ZLIBC = 11, //Stream compressor series 1X
     BZIPC = 12,
-    _7Z_C = 13,
+    //_7Z_C = 13, to be implemented
 
-    ZLIBD = 21, //Stream de-compressor
+    ZLIBD = 21, //Stream de-compressor series 2X
     BZIPD = 22,
-    _7Z_D = 23,
+    //_7Z_D = 23, to be implemented
     
-    ZDLTA = 31, // Delta compressor - diff
+    ZDLTA = 31, // Delta compressor - diff series 3X
     ZMSTD = 32,
     
-    ZDPAT = 41, // Delta compressor - patch
+    ZDPAT = 41, // Delta compressor - patch series 4X
     ZMSTP = 42,
     
-    LZDDP = 51, // Deduplicator 
+    LZDDP = 51, // Deduplicator series 5X
     
-    LZDUP = 61 // Duplicator
+    LZDUP = 61 // Duplicator series 6X
 } MODALGO;
 
 

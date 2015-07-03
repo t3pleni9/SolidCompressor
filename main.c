@@ -19,6 +19,7 @@ int main(int argc, char **argv) {
         if(inFile) {
             begin = clock();
             #if COMP == 1
+            solid_compress_init(ZLIBC, ZLIBD, BZIPC, 2, 3);
             solid_compress_fd(fileno(inFile), fileno(outFile));
             #else
             solid_de_compress_fd(fileno(inFile), fileno(outFile));

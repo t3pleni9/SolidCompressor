@@ -24,6 +24,7 @@
 
 #include "diff.h"
 
+
 #define TENPER(x) (x/10)
 
 typedef struct t_min_ds{
@@ -389,7 +390,7 @@ void * loop_thread(void *args_) {
         fprintf(stderr, "Self comparrison error. i_val in [start, end]\n");
         pthread_exit(NULL);
      }*/
-    
+    int diff_degree = (int)pow10((level / 3) + 2);
     for(i = lp->mXn.start; i < lp->mXn.end; i++) {
          j_check = i + TENPER(i_val);
          increment = j_check;
@@ -408,8 +409,9 @@ void * loop_thread(void *args_) {
                 pthread_mutex_unlock(&node_array[j].mutex);
             }
             
-           /* if(j == j_check) {
-                if(cur_sim_cnt <= (i_val / 1000)) {
+            
+            if(j == j_check) {
+                if(cur_sim_cnt < (i_val / diff_degree)) {
                     j += increment;   
                     increment += TENPER(i_val);
                     cur_sim_cnt = 0;                
@@ -418,7 +420,7 @@ void * loop_thread(void *args_) {
                 }
                 
                 j_check = (j + TENPER(i_val));
-            }*/
+            }
         }
     }
     end = clock();

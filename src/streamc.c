@@ -27,7 +27,7 @@
 //int level =9;
 
 static SOLID_RESULT _bzip2_decompress(int fd_in, int fd_out) {
-        level = 9;
+        //level = 9;
         BZFILE *BZ2fp_r = NULL;
         int len = 0;
         char buff[0x1000];
@@ -47,7 +47,7 @@ static SOLID_RESULT _bzip2_decompress(int fd_in, int fd_out) {
 }
 
 static SOLID_RESULT _bzip2_compress(int fd_in, int fd_out) {
-    level = 9;
+    //level = 9;
     BZFILE *BZ2fp_w = NULL;
     int len = 0;
     t_solid_data buffer;

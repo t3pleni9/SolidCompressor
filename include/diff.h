@@ -32,6 +32,7 @@
 #include <zdlib.h>
 #include <fuzzy.h>
 #include <time.h>
+#include <math.h>
 #include <errno.h>
 #include <unistd.h>
 #include <pthread.h>

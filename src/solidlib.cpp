@@ -45,13 +45,12 @@ ulInt netOut    = 0;
 
 unsigned int    SEG_S                   = 200000000;
 unsigned short  segment_pre_multiplier  = 3;
-unsigned short  degree                  = 10;
-unsigned short  level                   = 9;
+unsigned short  level                   = 2;
 
 char *__deDupBuffer__ = NULL;
 char *__outBuffer__   = NULL;
-char *__tempBuffer__  = NULL;
 char *__diffBuffer__  = NULL;
+
 
 MODALGO _scompressor_  = ZLIBC;
 MODALGO _delta_        = ZMSTD;
@@ -61,32 +60,42 @@ __attribute__((destructor)) void unmaplibBuffer() {
     if(__deDupBuffer__) munmap(__deDupBuffer__, SEG_S + 20);
 }
 
-/*
+static void printStats() {
+    fprintf(stderr, "Net IN: %lu Net OUT: %lu\n", netIn, netOut);
+}
+
+void solid_compress_init(MODALGO dedup, MODALGO diff, MODALGO strm, int seg_pre_mult, int comp_level) {
+    _duplicator_            = (dedup == DEFLT ? LZDDP : ((int)dedup / 10 == 5 ? dedup : LZDDP));
+    _delta_                 = (diff == DEFLT ? ZMSTD : ((int)diff / 10 == 3 ? diff : ZMSTD));
+    _scompressor_           = (strm == DEFLT ? ZLIBC : ((int)strm / 10 == 1 ? strm : ZLIBC));
+    level                   = (comp_level == -1 ? 9 : comp_level);
+    segment_pre_multiplier  = (seg_pre_mult == -1 ? 2 : seg_pre_mult);
+    
+
+}
+
+
+/*  ********************************** File header format ***********************************
+ * 
  * |-----------segment size (4 bits)------------|----------compression level (4 bits)--------| 0xff000000
  * |-------------------------stream compressor algorithm 8 bits------------------------------| 0x00ff0000
  * |-------------------------Delta compressor algorithm 8 bits ------------------------------| 0x0000ff00
  * |-------------------------De duplication algorithm 8 bits   ------------------------------| 0x000000ff
  */
 
-static void printStats() {
-    fprintf(stderr, "Net IN: %lu Net OUT: %lu\n", netIn, netOut);
-}
-
 static SOLID_RESULT _set_header(int out_fd) {
-    printf("%d\n", sizeof(unsigned int));
     int ret = 0;
-    /*unsigned int header = 0;
+    unsigned int header = 0;
     header |= (segment_pre_multiplier << 28);
     header |= (level << 24);
     header |= (((int)_scompressor_) << 16);
     header |= (((int)_delta_) << 8);
-    header |= (((int)_duplicator_));*/
-    if((ret = write_buf(out_fd, (char *)&_scompressor_, sizeof(_scompressor_))) < 0) goto error;
+    header |= (((int)_duplicator_));
+    /*if((ret = write_buf(out_fd, (char *)&_scompressor_, sizeof(_scompressor_))) < 0) goto error;
     if((ret = write_buf(out_fd, (char *)&_delta_, sizeof(_delta_))) < 0) goto error;
     if((ret = write_buf(out_fd, (char *)&_duplicator_, sizeof(_duplicator_))) < 0) goto error;
-    
-    //if((ret = write_buf(out_fd, (char *)&header, sizeof(header))) < 0) goto error;
-    //exit(0);
+    */
+    if((ret = write_buf(out_fd, (char *)&header, sizeof(header))) < 0) goto error;
     return S_DONE;
     error:
         fprintf(stderr, "ERROR: Writing file info failed.\n");
@@ -97,7 +106,7 @@ static SOLID_RESULT _get_header(int in_fd) {
     MODALGO inC;
     int readed = 0;
     unsigned int header = 0;
-    if((readed = read( in_fd, (char *)&inC, sizeof(inC))) < 0) {
+    /*if((readed = read( in_fd, (char *)&inC, sizeof(inC))) < 0) {
         fprintf(stderr, "ERROR: Unable to get file header.\n");
         return S_NULL;
     } else {
@@ -115,8 +124,8 @@ static SOLID_RESULT _get_header(int in_fd) {
     } else {
         _duplicator_ = (MODALGO)((int)inC + 10);
     }
-    
-    /*if((readed = read( in_fd, (char *)&header, sizeof(header))) < 0) {
+    */
+    if((readed = read( in_fd, (char *)&header, sizeof(header))) < 0) {
         fprintf(stderr, "ERROR: Unable to get file header.\n");
         return S_NULL;
     } else {
@@ -124,12 +133,11 @@ static SOLID_RESULT _get_header(int in_fd) {
         _delta_ = (MODALGO)(((header & 0x0000ff00) >> 8) + 10);
         _scompressor_ = (MODALGO)(((header & 0x00ff0000) >> 16) + 10);
         segment_pre_multiplier = (header & 0xf0000000) >> 28;
-        //degree = (header & 0x0C000000) >> 26;
         level = (header & 0x0f000000 ) >> 24;
         SEG_S = segment_pre_multiplier * 100000000;
-        printf ("%d %d %d %d %d %d\n", (int)_duplicator_, (int)_delta_, (int)_scompressor_, segment_pre_multiplier, degree,level);
-    }*/
-    SEG_S = segment_pre_multiplier * 100000000;
+        printf ("%d %d %d %d %d\n", (int)_duplicator_, (int)_delta_, (int)_scompressor_, segment_pre_multiplier,level);
+    }
+    //SEG_S = segment_pre_multiplier * 100000000;
     //exit(0);
     return S_DONE;
     
@@ -310,10 +318,13 @@ SOLID_RESULT _solid_compress_fd(int in_fd, int out_fd) {
 }
 
 SOLID_RESULT solid_compress_fd(int in_fd, int dump_fd) {
-    dfd = dump_fd;
-    ifd = in_fd;
     
-    SEG_S = segment_pre_multiplier * 100000000;
+    /*Initializing the pre requisites. */
+   
+    dfd                     = dump_fd;
+    ifd                     = in_fd;    
+    SEG_S                   = segment_pre_multiplier * 100000000;
+    
     int pipefd[2]   = {-1, -1};
     pthread_t t_diff;
     SOLID_DATA buffer;
