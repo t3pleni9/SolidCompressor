@@ -91,10 +91,6 @@ static SOLID_RESULT _set_header(int out_fd) {
     header |= (((int)_scompressor_) << 16);
     header |= (((int)_delta_) << 8);
     header |= (((int)_duplicator_));
-    /*if((ret = write_buf(out_fd, (char *)&_scompressor_, sizeof(_scompressor_))) < 0) goto error;
-    if((ret = write_buf(out_fd, (char *)&_delta_, sizeof(_delta_))) < 0) goto error;
-    if((ret = write_buf(out_fd, (char *)&_duplicator_, sizeof(_duplicator_))) < 0) goto error;
-    */
     if((ret = write_buf(out_fd, (char *)&header, sizeof(header))) < 0) goto error;
     return S_DONE;
     error:
@@ -103,28 +99,10 @@ static SOLID_RESULT _set_header(int out_fd) {
 }
 
 static SOLID_RESULT _get_header(int in_fd) {
-    MODALGO inC;
+    
     int readed = 0;
     unsigned int header = 0;
-    /*if((readed = read( in_fd, (char *)&inC, sizeof(inC))) < 0) {
-        fprintf(stderr, "ERROR: Unable to get file header.\n");
-        return S_NULL;
-    } else {
-        _scompressor_ = (MODALGO)((int)inC + 10);
-    }
-    if((readed = read( in_fd, (char *)&inC, sizeof(inC))) < 0) {
-        fprintf(stderr, "ERROR: Unable to get file header.\n");
-        return S_NULL;
-    } else {
-        _delta_ = (MODALGO)((int)inC + 10);
-    }
-    if((readed = read( in_fd, (char *)&inC, sizeof(inC))) < 0) {
-        fprintf(stderr, "ERROR: Unable to get file header.\n");
-        return S_NULL;
-    } else {
-        _duplicator_ = (MODALGO)((int)inC + 10);
-    }
-    */
+
     if((readed = read( in_fd, (char *)&header, sizeof(header))) < 0) {
         fprintf(stderr, "ERROR: Unable to get file header.\n");
         return S_NULL;
@@ -135,10 +113,8 @@ static SOLID_RESULT _get_header(int in_fd) {
         segment_pre_multiplier = (header & 0xf0000000) >> 28;
         level = (header & 0x0f000000 ) >> 24;
         SEG_S = segment_pre_multiplier * 100000000;
-        printf ("%d %d %d %d %d\n", (int)_duplicator_, (int)_delta_, (int)_scompressor_, segment_pre_multiplier,level);
     }
-    //SEG_S = segment_pre_multiplier * 100000000;
-    //exit(0);
+    
     return S_DONE;
     
 }
@@ -203,7 +179,6 @@ SOLID_RESULT _solid_compress_fd(int in_fd, int out_fd) {
     SOLID_RESULT    retResult      = SPIPE_DONE;
     int pipefd[2]   = {-1, -1};
     int ret         = 0;
-    int first_run   = 1;
     
     pthread_t t_diff;
     if ((__deDupBuffer__ = (char *)mmap (
@@ -287,8 +262,6 @@ SOLID_RESULT _solid_compress_fd(int in_fd, int out_fd) {
                 de_dup_buffer->in_buffer    = NULL;
                 de_dup_buffer->in_len       = 0;
                 de_dup_buffer->out_len      = 0;
-                
-                first_run = 0;
             }
         }
     }

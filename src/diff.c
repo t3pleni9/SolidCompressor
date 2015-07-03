@@ -23,6 +23,7 @@
 
 
 #include "diff.h"
+#include <math.h>
 
 
 #define TENPER(x) (x/10)
@@ -868,8 +869,6 @@ SOLID_RESULT zdelta_diff(void* _args) {
 }
 
 SOLID_RESULT zmst_diff(void* _args) {  
-    printf ("diff: %d\n", SEG_S);  
-    int fdout;
     diff_result diff;
     static int i = 0;
     clock_t begin, end;

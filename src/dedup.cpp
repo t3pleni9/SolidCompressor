@@ -299,7 +299,6 @@ SOLID_RESULT DeDup::duplicate(SOLID_DATA de_buffer) {
 }
 
 void * de_dup(void* _args) {
-    printf ("dedup: %d\n", SEG_S);
     static int i = 0;
     clock_t begin, end;
     double time_spent;
@@ -318,7 +317,6 @@ void * de_dup(void* _args) {
 }
 
 void *duplicate(void* _args) {
-    printf ("dedup: %d\n", SEG_S);
     DeDup deDup;
     SOLID_DATA buffer = (SOLID_DATA) _args;
     

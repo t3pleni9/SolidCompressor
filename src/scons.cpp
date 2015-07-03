@@ -14,16 +14,6 @@ extern "C" {
 char errorMsg[100];
 int dfd = 0;
 int ifd = 0;
-unsigned int compressionLevel = 47;
-
-//const unsigned int SEG_S = 550000000;
-
-unsigned int generateHeader() {
-    
-
-
-}
-unsigned int retrieveHeader(unsigned int headerWord);
 
 extern int write_buf(int fd, const void *buf, int size) {
 	int ret;
