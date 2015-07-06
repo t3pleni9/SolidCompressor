@@ -1,7 +1,7 @@
 #include<time.h>
 
 #include "solidlib.h"
-#define COMP 0
+#define COMP 1
 
 // Junk does get written.
 
@@ -10,16 +10,16 @@ int main(int argc, char **argv) {
         double time_spent;
         FILE *inFile, *outFile;
         #if COMP == 1
-        inFile = fopen("/media/disk1/test.tar", "rb");
-        outFile = fopen("/media/disk1/test.tar.gz", "wb");
+        inFile = fopen("/media/disk1/testData.tar", "rb");
+        outFile = fopen("/media/disk1/testData.tar.gz", "wb");
         #else
-        inFile = fopen("/media/disk1/test.tar.gz", "rb");
-        outFile = fopen("/media/disk1/test.out.tar", "wb");
+        inFile = fopen("/media/disk1/testData.tar.gz", "rb");
+        outFile = fopen("/media/disk1/testData.out.tar", "wb");
         #endif
         if(inFile) {
             begin = clock();
             #if COMP == 1
-            solid_compress_init(ZLIBC, ZLIBD, BZIPC, 2, 3);
+            solid_compress_init(ZLIBC, ZLIBD, ZLIBC, 5, 9);
             solid_compress_fd(fileno(inFile), fileno(outFile));
             #else
             solid_de_compress_fd(fileno(inFile), fileno(outFile));

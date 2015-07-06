@@ -46,6 +46,7 @@ typedef struct t_looper {
 
 typedef looper* LPTR;
 
+int diff_degree;// = (int)pow(10, (level / 3) + 2);
 
 
 char *streamHandleBuffer = NULL;
@@ -391,7 +392,8 @@ void * loop_thread(void *args_) {
         fprintf(stderr, "Self comparrison error. i_val in [start, end]\n");
         pthread_exit(NULL);
      }*/
-    int diff_degree = (int)pow10((level / 3) + 2);
+    //int diff_degree = i_val / (int)pow10((level / 3) + 2);
+    printf("diff_degree : %d\n", i_val/diff_degree);//(int)pow10((level / 3) + 2);
     for(i = lp->mXn.start; i < lp->mXn.end; i++) {
          j_check = i + TENPER(i_val);
          increment = j_check;
@@ -412,7 +414,7 @@ void * loop_thread(void *args_) {
             
             
             if(j == j_check) {
-                if(cur_sim_cnt < (i_val / diff_degree)) {
+                if(cur_sim_cnt < (i_val/diff_degree)) {
                     j += increment;   
                     increment += TENPER(i_val);
                     cur_sim_cnt = 0;                
@@ -496,6 +498,16 @@ static diff_result do_diff_fd_mst(char *inBuffer, int out_fd, size_t inLen, size
         int         ret             = 0; 
         char        *node_buffer    = NULL;
         unsigned int blockCount     = inLen / DIFF_BLOCK, i;
+        static int prev_goodness    = 0;
+        static int round_diff_deg   = -1;
+        static int round_level      = 0;
+        
+        if(round_diff_deg == -1) { 
+            round_level = (level / 3) + 2;
+            round_diff_deg = (int)pow10((double)round_level);
+        }
+            
+            
         ret = pipe(pipefd);    
         if (ret < 0) {
             ret = -errno;
@@ -532,10 +544,17 @@ static diff_result do_diff_fd_mst(char *inBuffer, int out_fd, size_t inLen, size
         
         clock_t begin, end, begin1, end1;
         double time_spent = 0, tim2 = 0;
-        
+        diff_degree = round_diff_deg;
         begin = clock();
         int goodness = create_delta_graph(node_array, blockCount);
         end = clock();
+        if( goodness > prev_goodness) {
+            round_level = (round_level + 1) > 8 ? round_level : round_level + 1;
+            round_diff_deg = (int)pow10((double)round_level);
+        } else {
+            round_diff_deg = -1;
+        }
+        prev_goodness = goodness;
         fprintf(stderr, "goodness = %d\n", goodness);
         time_spent = (double)(end - begin) / CLOCKS_PER_SEC;
         fprintf(stderr, "Create Graph time: %f\n", time_spent);

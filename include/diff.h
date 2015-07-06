@@ -32,7 +32,6 @@
 #include <zdlib.h>
 #include <fuzzy.h>
 #include <time.h>
-#include <math.h>
 #include <errno.h>
 #include <unistd.h>
 #include <pthread.h>
@@ -80,7 +79,7 @@ typedef enum{
     DIFF_THRD_ERROR = 10
 } diff_result;
 
-#define DIFF_BLOCK (SEG_S/4000)
+#define DIFF_BLOCK (50000)
 #define MAX_DIFF_BLOCK ((SEG_S / DIFF_BLOCK) + 10)
 #define PATCH_BLOCK (DIFF_BLOCK + sizeof(int) + sizeof(size_t))
 #define DIFF_THLD 10
